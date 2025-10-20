@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.aplicaciongrupo7"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.aplicaciongrupo7"
@@ -35,4 +35,5 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.compose.foundation)
 }
