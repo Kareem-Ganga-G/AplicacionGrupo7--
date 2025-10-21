@@ -23,6 +23,8 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var useEmailLogin by remember { mutableStateOf(false) } // Nuevo: toggle entre usuario y email
+
     val context = LocalContext.current
     val userManager = remember { UserManager(context) }
 
@@ -48,6 +50,35 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(48.dp))
 
+        // Toggle entre usuario y email
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Usuario",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (!useEmailLogin) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Switch(
+                checked = useEmailLogin,
+                onCheckedChange = { useEmailLogin = it },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Text(
+                text = "Email",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (useEmailLogin) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         if (errorMessage.isNotEmpty()) {
             Text(
                 text = errorMessage,
@@ -62,9 +93,18 @@ fun LoginScreen(
                 username = it
                 errorMessage = ""
             },
-            label = { Text("Usuario") },
+            label = {
+                Text(
+                    if (useEmailLogin) "Email" else "Usuario"
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
-            isError = errorMessage.isNotEmpty()
+            isError = errorMessage.isNotEmpty(),
+            placeholder = {
+                Text(
+                    if (useEmailLogin) "ejemplo@gmail.com" else "Nombre de usuario"
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -87,17 +127,30 @@ fun LoginScreen(
             onClick = {
                 if (username.isEmpty() || password.isEmpty()) {
                     errorMessage = "Por favor completa todos los campos"
+                } else if (useEmailLogin && !isValidEmail(username)) {
+                    errorMessage = "Por favor ingresa un email válido"
                 } else {
                     isLoading = true
-                    if (userManager.validateLogin(username, password)) {
-                        val user = userManager.getCurrentUser()
+
+                    val loginSuccess = if (useEmailLogin) {
+                        userManager.loginWithEmail(username, password)
+                    } else {
+                        userManager.validateLogin(username, password)
+                    }
+
+                    if (loginSuccess) {
+                        val user = userManager.currentUser
                         if (user?.isAdmin == true) {
                             onAdminLogin()
                         } else {
                             onLoginSuccess()
                         }
                     } else {
-                        errorMessage = "Usuario o contraseña incorrectos"
+                        errorMessage = if (useEmailLogin) {
+                            "Email o contraseña incorrectos"
+                        } else {
+                            "Usuario o contraseña incorrectos"
+                        }
                     }
                     isLoading = false
                 }
@@ -138,10 +191,16 @@ fun LoginScreen(
         if (savedUser != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Demo: Usuario Guardado: ${savedUser.username} - Contraseña: ${savedUser.password}",
+                text = "Demo: Usuario: ${savedUser.username} - Email: ${savedUser.email}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
+}
+
+// Función para validar formato de email
+private fun isValidEmail(email: String): Boolean {
+    val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
+    return email.matches(emailRegex)
 }

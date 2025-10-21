@@ -30,7 +30,7 @@ fun RegisterScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val userManager = remember { UserManager(context) } // CREAMOS UserManager AQUÍ
+    val userManager = remember { UserManager(context) }
 
     // Detectar orientación
     val configuration = LocalConfiguration.current
@@ -100,7 +100,8 @@ fun RegisterScreen(
             },
             label = { Text("Email *") },
             modifier = Modifier.fillMaxWidth(),
-            isError = errorMessage.isNotEmpty()
+            isError = errorMessage.isNotEmpty(),
+            placeholder = { Text("ejemplo@gmail.com") }
         )
 
         Spacer(modifier = Modifier.height(if (isLandscape) 12.dp else 16.dp))
@@ -132,11 +133,15 @@ fun RegisterScreen(
         )
 
         Spacer(modifier = Modifier.height(if (isLandscape) 24.dp else 32.dp))
+
         Button(
             onClick = {
                 when {
                     username.isEmpty() || password.isEmpty() || email.isEmpty() || confirmPassword.isEmpty() -> {
                         errorMessage = "Por favor completa todos los campos"
+                    }
+                    !isValidEmail(email) -> {
+                        errorMessage = "Por favor ingresa un email válido (ej: usuario@gmail.com)"
                     }
                     password != confirmPassword -> {
                         errorMessage = "Las contraseñas no coinciden"
@@ -144,19 +149,21 @@ fun RegisterScreen(
                     password.length < 4 -> {
                         errorMessage = "La contraseña debe tener al menos 4 caracteres"
                     }
+                    userManager.userExists(username) -> {
+                        errorMessage = "El usuario ya existe"
+                    }
+                    userManager.emailExists(email) -> {
+                        errorMessage = "El email ya está registrado"
+                    }
                     else -> {
                         isLoading = true
-                        // INTENTAR REGISTRAR USUARIO
-                        try {
-                            val newUser = User(username, password, email, isAdmin = false)
-                            userManager.saveUser(newUser) // Esto probablemente no devuelve Boolean
-                            onRegisterSuccess() // Si no hay error, registro exitoso
-                        } catch (e: Exception) {
-                            // Si hay excepción, mostrar error
-                            errorMessage = "El usuario o email ya existen"
-                        } finally {
-                            isLoading = false
+                        val success = userManager.saveUser(User(username, password, email, isAdmin = false))
+                        if (success) {
+                            onRegisterSuccess()
+                        } else {
+                            errorMessage = "Error al registrar usuario"
                         }
+                        isLoading = false
                     }
                 }
             },
@@ -172,7 +179,6 @@ fun RegisterScreen(
                 Text("Registrarse")
             }
         }
-        }
 
         Spacer(modifier = Modifier.height(if (isLandscape) 16.dp else 24.dp))
 
@@ -186,3 +192,10 @@ fun RegisterScreen(
             }
         }
     }
+}
+
+// Función para validar formato de email
+private fun isValidEmail(email: String): Boolean {
+    val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
+    return email.matches(emailRegex)
+}
