@@ -26,7 +26,6 @@ fun AppNavigation() {
     val context = LocalContext.current
     val userManager = remember { UserManager(context) }
 
-    // Si no hay usuario registrado, mostrar registro primero la parte del registro
     LaunchedEffect(Unit) {
         if (!userManager.isUserRegistered()) {
             currentScreen = "register"
