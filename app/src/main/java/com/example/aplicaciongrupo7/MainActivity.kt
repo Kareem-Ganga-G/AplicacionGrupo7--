@@ -40,8 +40,8 @@ fun AppNavigation() {
         )
         "register" -> RegisterScreen(
             onRegisterSuccess = { currentScreen = "login" },
-            onBackToLogin = { currentScreen = "login" },
-            userManager = userManager
+            onBackToLogin = { currentScreen = "login" }
+
         )
         "catalog" -> CatalogScreen(
             onLogout = { currentScreen = "login" },

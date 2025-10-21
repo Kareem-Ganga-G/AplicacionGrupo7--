@@ -36,10 +36,11 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation:1.5.4")
-
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
     // Gson debe estar en dependencies, no en android
     implementation("com.google.code.gson:gson:2.10.1")
 
     // Si necesitas navigation para Compose
     implementation("androidx.navigation:navigation-compose:2.7.3")
+
 }

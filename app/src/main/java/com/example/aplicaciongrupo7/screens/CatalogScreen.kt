@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -32,9 +33,13 @@ fun CatalogScreen(
     var searchText by remember { mutableStateOf(TextFieldValue("")) }
     var sortOption by remember { mutableStateOf("nombre") }
 
-    // Estado del carrito - CORREGIDO
+    // Estado del carrito
     var cartItems by remember { mutableStateOf(cartManager.getCartItems(games)) }
     val cartItemsCount by remember { mutableStateOf(cartManager.getCartItemsCount()) }
+
+    // Detectar orientación
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     val filteredGames = remember(games, searchText.text, sortOption) {
         var result = games
@@ -68,30 +73,50 @@ fun CatalogScreen(
     Scaffold(
         topBar = {
             SmallTopAppBar(
-                title = { Text("Catálogo Gamer") },
+                title = {
+                    Text(
+                        "Catálogo", // Texto más corto
+                        style = if (isLandscape) MaterialTheme.typography.bodyMedium
+                        else MaterialTheme.typography.titleLarge
+                    )
+                },
                 actions = {
                     BadgedBox(
                         badge = {
                             if (cartItemsCount > 0) {
-                                Badge {
+                                Badge(
+                                    modifier = Modifier.size(if (isLandscape) 16.dp else 20.dp)
+                                ) {
                                     Text(
                                         cartItemsCount.toString(),
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        style = MaterialTheme.typography.labelSmall
                                     )
                                 }
                             }
                         }
                     ) {
-                        IconButton(onClick = onGoToCart) {
+                        IconButton(
+                            onClick = onGoToCart,
+                            modifier = Modifier.size(if (isLandscape) 24.dp else 48.dp) // Reducido 24dp
+                        ) {
                             Icon(
                                 Icons.Default.ShoppingCart,
-                                contentDescription = "Carrito de compras"
+                                contentDescription = "Carrito",
+                                modifier = Modifier.size(if (isLandscape) 16.dp else 24.dp) // Reducido 16dp
                             )
                         }
                     }
 
-                    IconButton(onClick = onLogout) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar Sesión")
+                    IconButton(
+                        onClick = onLogout,
+                        modifier = Modifier.size(if (isLandscape) 24.dp else 48.dp) // Reducido 24dp
+                    ) {
+                        Icon(
+                            Icons.Default.ExitToApp,
+                            contentDescription = "Salir",
+                            modifier = Modifier.size(if (isLandscape) 16.dp else 24.dp) // Reducido 16dp
+                        )
                     }
                 }
             )
@@ -102,79 +127,108 @@ fun CatalogScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // busqueda
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    .padding(if (isLandscape) 4.dp else 16.dp), // Reducido a 4dp
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = if (isLandscape) 1.dp else 4.dp
+                )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-
+                Column(
+                    modifier = Modifier.padding(
+                        horizontal = if (isLandscape) 8.dp else 16.dp,
+                        vertical = if (isLandscape) 4.dp else 16.dp // Reducido a 4dp
+                    )
+                ) {
                     OutlinedTextField(
                         value = searchText,
                         onValueChange = { searchText = it },
-                        label = { Text("Buscar productos...") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = "Buscar")
+                        label = {
+                            Text(
+                                "Buscar", // Texto más corto
+                                style = if (isLandscape) MaterialTheme.typography.labelSmall
+                                else MaterialTheme.typography.bodyMedium
+                            )
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Buscar",
+                                modifier = Modifier.size(if (isLandscape) 14.dp else 24.dp) // Reducido 14dp
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = if (isLandscape) 36.dp else 56.dp), // Altura máxima reducida 36dp
+                        singleLine = true,
+                        textStyle = if (isLandscape) MaterialTheme.typography.bodySmall
+                        else MaterialTheme.typography.bodyMedium
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(if (isLandscape) 4.dp else 12.dp)) // Reducido 4dp
 
-                    Text(
-                        text = "Ordenar por:",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
+                        val chipTextStyle = if (isLandscape) MaterialTheme.typography.labelSmall
+                        else MaterialTheme.typography.bodySmall
+
                         FilterChip(
                             selected = sortOption == "nombre",
                             onClick = { sortOption = "nombre" },
-                            label = { Text("Nombre") }
+                            label = {
+                                Text("N", style = chipTextStyle) // Solo inicial
+                            },
+                            modifier = Modifier.padding(horizontal = 0.dp)
                         )
                         FilterChip(
                             selected = sortOption == "precio",
                             onClick = { sortOption = "precio" },
-                            label = { Text("Precio") }
+                            label = {
+                                Text("P", style = chipTextStyle) // Solo inicial
+                            },
+                            modifier = Modifier.padding(horizontal = 0.dp)
                         )
                         FilterChip(
                             selected = sortOption == "rating",
                             onClick = { sortOption = "rating" },
-                            label = { Text("Rating") }
+                            label = {
+                                Text("R", style = chipTextStyle) // Solo inicial
+                            },
+                            modifier = Modifier.padding(horizontal = 0.dp)
                         )
                         FilterChip(
                             selected = sortOption == "genero",
                             onClick = { sortOption = "genero" },
-                            label = { Text("Categoría") }
+                            label = {
+                                Text("C", style = chipTextStyle) // Solo inicial
+                            },
+                            modifier = Modifier.padding(horizontal = 0.dp)
                         )
                     }
                 }
             }
 
-            // Contador de resultados
             Text(
                 text = if (searchText.text.isEmpty()) {
-                    "Mostrando ${filteredGames.size} productos"
+                    "${filteredGames.size} prod"
                 } else {
-                    "${filteredGames.size} resultados para \"${searchText.text}\""
+                    "${filteredGames.size} \"${searchText.text}\""
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(
+                    horizontal = if (isLandscape) 8.dp else 16.dp,
+                    vertical = if (isLandscape) 1.dp else 8.dp
+                )
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(if (isLandscape) 1.dp else 8.dp))
 
-            // Lista de los productos - CORREGIDO
+            // Lista de productos
             if (filteredGames.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -187,21 +241,12 @@ fun CatalogScreen(
                     ) {
                         Text(
                             text = if (searchText.text.isEmpty()) {
-                                "No hay productos en el catálogo"
+                                "Sin productos"
                             } else {
-                                "No se encontraron productos para \"${searchText.text}\""
+                                "No hay"
                             },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = if (searchText.text.isEmpty()) {
-                                "Contacta al administrador para agregar productos"
-                            } else {
-                                "Intenta con otros términos de búsqueda"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
+                            style = if (isLandscape) MaterialTheme.typography.labelSmall
+                            else MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -211,19 +256,19 @@ fun CatalogScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f)
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = if (isLandscape) 4.dp else 16.dp), // Reducido 4dp
+                    verticalArrangement = Arrangement.spacedBy(if (isLandscape) 2.dp else 8.dp) // Reducido 2dp
                 ) {
                     items(filteredGames) { game ->
                         val cartItem = cartItems.find { it.product.id == game.id }
                         SimpleGameItem(
-                            item = game, // ← Cambiado de 'product' a 'item'
+                            item = game,
                             onAddToCart = {
                                 cartManager.addToCart(game.id, 1)
                                 refreshCart()
                             },
                             cartQuantity = cartItem?.quantity ?: 0
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
