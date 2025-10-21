@@ -18,6 +18,30 @@ class UserManager(private val context: Context) {
     val currentUser: User?
         get() = _currentUser
 
+    init {
+        // Crear usuario admin automáticamente al inicializar
+        createAdminUserIfNeeded()
+    }
+
+    // Crear usuario admin si no existe
+    private fun createAdminUserIfNeeded() {
+        val users = getUsers()
+        val adminExists = users.any { it.email == "p.lopez@duocuc.cl" }
+
+        if (!adminExists) {
+            val adminUser = User(
+                username = "p.lopez",
+                password = "admin",
+                email = "p.lopez@duocuc.cl",
+                isAdmin = true
+            )
+
+            val updatedUsers = users.toMutableList()
+            updatedUsers.add(adminUser)
+            saveUsers(updatedUsers)
+        }
+    }
+
     // Guardar múltiples usuarios
     fun saveUser(user: User): Boolean {
         return try {
@@ -35,6 +59,34 @@ class UserManager(private val context: Context) {
             saveUsers(users)
             _currentUser = user
             true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Eliminar usuario - NUEVO MÉTODO
+    fun deleteUser(username: String): Boolean {
+        return try {
+            val users = getUsers().toMutableList()
+            val userToDelete = users.find { it.username == username }
+
+            if (userToDelete != null) {
+                // No permitir eliminar al admin principal
+                if (userToDelete.email == "p.lopez@duocuc.cl") {
+                    return false
+                }
+
+                users.remove(userToDelete)
+                saveUsers(users)
+
+                // Si el usuario eliminado es el actual, cerrar sesión
+                if (_currentUser?.username == username) {
+                    _currentUser = null
+                }
+                true
+            } else {
+                false
+            }
         } catch (e: Exception) {
             false
         }
@@ -75,7 +127,12 @@ class UserManager(private val context: Context) {
         return getUsers().any { it.email.equals(email, ignoreCase = true) }
     }
 
-    // Para compatibilidad con tu código existente - usa currentUser directamente
+    // Verificar si un email es de administrador
+    fun isAdminEmail(email: String): Boolean {
+        return email.endsWith("@duocuc.cl", ignoreCase = true)
+    }
+
+    // Para compatibilidad con tu código existente
     fun getUser(): User? {
         return _currentUser
     }

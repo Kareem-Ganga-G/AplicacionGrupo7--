@@ -22,3 +22,10 @@ data class CartItem(
     val product: Product,
     val quantity: Int = 1
 )
+data class Sale(
+    val id: Long,
+    val date: String,
+    val items: List<CartItem>,
+    val total: Double,
+    val userId: String
+)
