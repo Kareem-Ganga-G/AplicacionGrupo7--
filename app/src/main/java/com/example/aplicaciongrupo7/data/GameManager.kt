@@ -4,11 +4,12 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import com.example.aplicaciongrupo7.R
+
 class GameManager(private val context: Context) {
     private val sharedPreferences = context.getSharedPreferences("game_prefs", Context.MODE_PRIVATE)
     private val gamesKey = "games_list"
 
-    // Listapor defecto
+    // Lista por defecto
     private val defaultGames = listOf(
         Product(1, "AMD Ryzen 9 7950X", "Procesador", "$699.990", 4.8f, "16 núcleos, 4.5GHz", R.drawable.procesador_amd_ryzen9, stock = 10),
         Product(2, "Intel Core i9-14900K", "Procesador", "$589.990", 4.6f, "24 núcleos, 6.0GHz", R.drawable.procesador_intel_i9, stock = 10),
@@ -70,6 +71,9 @@ class GameManager(private val context: Context) {
                 put("genre", product.genre)
                 put("price", product.price)
                 put("rating", product.rating.toDouble())
+                put("imageRes", product.imageRes) // AÑADIDO: Guardar imageRes
+                put("stock", product.stock) // AÑADIDO: Guardar stock
+
             }
             jsonArray.put(jsonObject)
         }
@@ -88,14 +92,15 @@ class GameManager(private val context: Context) {
                     genre = jsonObject.getString("genre"),
                     price = jsonObject.getString("price"),
                     rating = jsonObject.getDouble("rating").toFloat(),
-                    imageRes = jsonObject.optInt("imageRes"),
-                    stock = jsonObject.optInt("stock")
+                    imageRes = jsonObject.optInt("imageRes", R.drawable.procesador_amd_ryzen9),
+                    stock = jsonObject.optInt("stock", 0)
                 )
                 games.add(game)
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            return emptyList()
+            saveGames(defaultGames)
+            return defaultGames
         }
         return games
     }

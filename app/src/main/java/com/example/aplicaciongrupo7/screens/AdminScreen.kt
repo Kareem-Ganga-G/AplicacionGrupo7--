@@ -1,5 +1,6 @@
 package com.example.aplicaciongrupo7.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,9 +13,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import com.example.aplicaciongrupo7.R
 import com.example.aplicaciongrupo7.components.GameItem
 import com.example.aplicaciongrupo7.data.Product
 import com.example.aplicaciongrupo7.data.GameManager
@@ -125,11 +131,11 @@ fun AdminScreen(onBack: () -> Unit) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            Icons.Default.Star,
+                        Image(
+                            painter = painterResource(id = R.drawable.logoinicio),
                             contentDescription = "Sin productos",
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier.size(120.dp),
+                            contentScale = ContentScale.Fit
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
@@ -200,7 +206,38 @@ fun GameEditDialog(
     var price by remember { mutableStateOf(game?.price ?: "") }
     var rating by remember { mutableStateOf(game?.rating?.toString() ?: "4.0") }
     var stock by remember { mutableStateOf(game?.stock?.toString() ?: "0") }
+    var selectedImage by remember { mutableStateOf(game?.imageRes ?: R.drawable.procesador_amd_ryzen9) }
     var errorMessage by remember { mutableStateOf("") }
+
+    // Lista de imágenes disponibles - CORREGIDO con los nombres reales
+    val availableImages = listOf(
+        R.drawable.procesador_amd_ryzen9,
+        R.drawable.procesador_amd_ryzen7,
+        R.drawable.procesador_intel_i9,
+        R.drawable.gpu_rtx4090,  // CORREGIDO: era qpu_rtx4090
+        R.drawable.gpu_rtx4070,  // CORREGIDO: era qpu_rtx4070
+        R.drawable.gpu_amd_radeon,  // CORREGIDO: era qpu_amd_radeon
+        R.drawable.ram_corsair_dominator,
+        R.drawable.ram_gskill_trident,
+        R.drawable.monitor_samsung_odyssey,
+        R.drawable.monitor_asus_rog,  // CORREGIDO: era monitor_asus_reg
+        R.drawable.monitor_alienware
+    )
+
+    // Nombres de las imágenes para mostrar
+    val imageNames = mapOf(
+        R.drawable.procesador_amd_ryzen9 to "AMD Ryzen 9",
+        R.drawable.procesador_amd_ryzen7 to "AMD Ryzen 7",
+        R.drawable.procesador_intel_i9 to "Intel Core i9",
+        R.drawable.gpu_rtx4090 to "RTX 4090",
+        R.drawable.gpu_rtx4070 to "RTX 4070",
+        R.drawable.gpu_amd_radeon to "AMD Radeon",
+        R.drawable.ram_corsair_dominator to "RAM Corsair",
+        R.drawable.ram_gskill_trident to "RAM G.Skill",
+        R.drawable.monitor_samsung_odyssey to "Samsung Odyssey",
+        R.drawable.monitor_asus_rog to "ASUS ROG",
+        R.drawable.monitor_alienware to "Alienware"
+    )
 
     LaunchedEffect(game) {
         title = game?.title ?: ""
@@ -208,6 +245,7 @@ fun GameEditDialog(
         price = game?.price ?: ""
         rating = game?.rating?.toString() ?: "4.0"
         stock = game?.stock?.toString() ?: "0"
+        selectedImage = game?.imageRes ?: R.drawable.procesador_amd_ryzen9
         errorMessage = ""
     }
 
@@ -229,13 +267,73 @@ fun GameEditDialog(
                     )
                 }
 
+                // Selector de imagen
+                Text(
+                    text = "Seleccionar Imagen:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Mostrar imagen seleccionada actualmente
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = selectedImage),
+                        contentDescription = "Imagen seleccionada",
+                        modifier = Modifier.size(50.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = imageNames[selectedImage] ?: "Imagen",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                // Grid de selección de imágenes
+                LazyColumn(
+                    modifier = Modifier.height(120.dp)
+                ) {
+                    items(availableImages.chunked(3)) { rowImages ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            rowImages.forEach { imageRes ->
+                                Box(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .border(
+                                            width = 2.dp,
+                                            color = if (selectedImage == imageRes) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.outline,
+                                            shape = MaterialTheme.shapes.small
+                                        )
+                                        .clickable { selectedImage = imageRes }
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = imageRes),
+                                        contentDescription = imageNames[imageRes],
+                                        modifier = Modifier.size(60.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = title,
                     onValueChange = {
                         title = it
                         errorMessage = ""
                     },
-                    label = { Text("Título del producto ") },
+                    label = { Text("Título del producto") },
                     modifier = Modifier.fillMaxWidth(),
                     isError = errorMessage.isNotEmpty()
                 )
@@ -246,7 +344,7 @@ fun GameEditDialog(
                         genre = it
                         errorMessage = ""
                     },
-                    label = { Text("Género *") },
+                    label = { Text("Categoría *") },
                     modifier = Modifier.fillMaxWidth(),
                     isError = errorMessage.isNotEmpty()
                 )
@@ -258,7 +356,7 @@ fun GameEditDialog(
                         errorMessage = ""
                     },
                     label = { Text("Precio *") },
-                    placeholder = { Text("Ej: $59.990") },
+                    placeholder = { Text("Ej: \$59.990") },
                     modifier = Modifier.fillMaxWidth(),
                     isError = errorMessage.isNotEmpty(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -307,7 +405,7 @@ fun GameEditDialog(
                 onClick = {
                     val stockInt = stock.toIntOrNull()
                     when {
-                        title.isBlank() || genre.isBlank() || price.isBlank() || stock.isBlank() -> { // isBlank() es mejor que isEmpty()
+                        title.isBlank() || genre.isBlank() || price.isBlank() || stock.isBlank() -> {
                             errorMessage = "Por favor completa todos los campos obligatorios"
                         }
                         rating.toFloatOrNull() == null -> {
@@ -329,14 +427,13 @@ fun GameEditDialog(
                                 genre = genre.trim(),
                                 price = price.trim(),
                                 rating = rating.toFloat(),
-                                imageRes = game?.imageRes ?: com.example.aplicaciongrupo7.R.drawable.procesador_amd_ryzen9,
+                                imageRes = selectedImage,
                                 stock = stockInt
                             )
                             onSave(newGame)
                         }
                     }
                 },
-                // Habilitar botón solo si todos los campos requeridos tienen texto
                 enabled = title.isNotBlank() && genre.isNotBlank() && price.isNotBlank() && stock.isNotBlank()
             ) {
                 Text(if (game == null) "Agregar" else "Guardar Cambios")
