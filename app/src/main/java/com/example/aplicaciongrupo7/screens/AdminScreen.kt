@@ -13,10 +13,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType // Importa KeyboardType
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.components.GameItem
-import com.example.aplicaciongrupo7.data.Game
+import com.example.aplicaciongrupo7.data.Product
 import com.example.aplicaciongrupo7.data.GameManager
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,7 +26,7 @@ fun AdminScreen(onBack: () -> Unit) {
     val gameManager = remember { GameManager(context) }
     var games by remember { mutableStateOf(gameManager.getGames()) }
     var showAddDialog by remember { mutableStateOf(false) }
-    var editingGame by remember { mutableStateOf<Game?>(null) }
+    var editingGame by remember { mutableStateOf<Product?>(null) }
 
     Scaffold(
         topBar = {
@@ -49,7 +49,7 @@ fun AdminScreen(onBack: () -> Unit) {
                 onClick = { showAddDialog = true },
                 modifier = Modifier.padding(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar juego")
+                Icon(Icons.Default.Add, contentDescription = "Agregar producto")
             }
         }
     ) { paddingValues ->
@@ -79,7 +79,7 @@ fun AdminScreen(onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Juegos",
+                            text = "Productos",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -127,13 +127,13 @@ fun AdminScreen(onBack: () -> Unit) {
                     ) {
                         Icon(
                             Icons.Default.Star,
-                            contentDescription = "Sin juegos",
+                            contentDescription = "Sin productos",
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No hay juegos en el catálogo",
+                            text = "No hay productos en el catálogo",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -171,11 +171,11 @@ fun AdminScreen(onBack: () -> Unit) {
     if (showAddDialog || editingGame != null) {
         GameEditDialog(
             game = editingGame,
-            onSave = { game ->
+            onSave = { product ->
                 if (editingGame != null) {
-                    gameManager.updateGame(game)
+                    gameManager.updateGame(product)
                 } else {
-                    gameManager.addGame(game)
+                    gameManager.addGame(product)
                 }
                 games = gameManager.getGames()
                 showAddDialog = false
@@ -191,15 +191,14 @@ fun AdminScreen(onBack: () -> Unit) {
 
 @Composable
 fun GameEditDialog(
-    game: Game?,
-    onSave: (Game) -> Unit,
+    game: Product?,
+    onSave: (Product) -> Unit,
     onDismiss: () -> Unit
 ) {
     var title by remember { mutableStateOf(game?.title ?: "") }
     var genre by remember { mutableStateOf(game?.genre ?: "") }
     var price by remember { mutableStateOf(game?.price ?: "") }
     var rating by remember { mutableStateOf(game?.rating?.toString() ?: "4.0") }
-    // 1. CREAR EL ESTADO PARA EL STOCK
     var stock by remember { mutableStateOf(game?.stock?.toString() ?: "0") }
     var errorMessage by remember { mutableStateOf("") }
 
@@ -208,7 +207,6 @@ fun GameEditDialog(
         genre = game?.genre ?: ""
         price = game?.price ?: ""
         rating = game?.rating?.toString() ?: "4.0"
-        // Reiniciar stock también
         stock = game?.stock?.toString() ?: "0"
         errorMessage = ""
     }
@@ -237,7 +235,7 @@ fun GameEditDialog(
                         title = it
                         errorMessage = ""
                     },
-                    label = { Text("Título del juego *") },
+                    label = { Text("Título del producto ") },
                     modifier = Modifier.fillMaxWidth(),
                     isError = errorMessage.isNotEmpty()
                 )
@@ -260,7 +258,7 @@ fun GameEditDialog(
                         errorMessage = ""
                     },
                     label = { Text("Precio *") },
-                    placeholder = { Text("Ej: $59.99") },
+                    placeholder = { Text("Ej: $59.990") },
                     modifier = Modifier.fillMaxWidth(),
                     isError = errorMessage.isNotEmpty(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -269,8 +267,7 @@ fun GameEditDialog(
                 OutlinedTextField(
                     value = rating,
                     onValueChange = {
-                        // Validación manual para solo permitir números y punto decimal
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,1}$"))) { // Mejorado
+                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,1}$"))) {
                             rating = it
                             errorMessage = ""
                         }
@@ -281,13 +278,11 @@ fun GameEditDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
 
-                Spacer(modifier = Modifier.height(12.dp)) // Espacio antes del nuevo campo
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // 2. AÑADIR EL CAMPO (TEXTFIELD) PARA EL STOCK
                 OutlinedTextField(
                     value = stock,
                     onValueChange = {
-                        // Permite solo dígitos
                         if (it.all { char -> char.isDigit() }) {
                             stock = it
                             errorMessage = ""
@@ -322,20 +317,19 @@ fun GameEditDialog(
                             errorMessage = "El rating debe estar entre 0.0 y 5.0"
                         }
                         !price.startsWith("$") -> {
-                            errorMessage = "El precio debe empezar con $ (Ej: \$59.99)"
+                            errorMessage = "El precio debe empezar con $ (Ej: \$59.990)"
                         }
                         stockInt == null || stockInt < 0 -> {
                             errorMessage = "El stock debe ser un número entero válido y no negativo"
                         }
                         else -> {
-                            val newGame = Game(
+                            val newGame = Product(
                                 id = game?.id ?: 0,
                                 title = title.trim(),
                                 genre = genre.trim(),
                                 price = price.trim(),
                                 rating = rating.toFloat(),
                                 imageRes = game?.imageRes ?: com.example.aplicaciongrupo7.R.drawable.procesador_amd_ryzen9,
-                                // 3. USAR EL VALOR DEL ESTADO CONVERTIDO A ENTERO
                                 stock = stockInt
                             )
                             onSave(newGame)

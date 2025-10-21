@@ -42,7 +42,7 @@ fun LoginScreen(
         )
 
         Text(
-            text = "Tienda Gamer Grupo 7",
+            text = "Tienda Level-UP GAMER",
             style = MaterialTheme.typography.headlineLarge
         )
 

@@ -13,11 +13,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.aplicaciongrupo7.data.Game
+import com.example.aplicaciongrupo7.data.Product
 
 @Composable
 fun SimpleGameItem(
-    game: Game,
+    game: Product,
     onAddToCart: (() -> Unit)? = null,
     cartQuantity: Int = 0
 ) {
@@ -36,7 +36,6 @@ fun SimpleGameItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Información del producto
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -78,7 +77,6 @@ fun SimpleGameItem(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Mostrar cantidad en carrito si existe
                 if (cartQuantity > 0) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -89,7 +87,6 @@ fun SimpleGameItem(
                 }
             }
 
-            // Botón de agregar al carrito
             if (onAddToCart != null && game.stock > 0) {
                 IconButton(
                     onClick = onAddToCart,

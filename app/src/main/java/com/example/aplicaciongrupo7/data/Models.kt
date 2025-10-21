@@ -7,7 +7,7 @@ data class User(
     val isAdmin: Boolean = false
 )
 
-data class Game(
+data class Product(
     val id: Int,
     val title: String,
     val genre: String,
