@@ -1,5 +1,6 @@
 package com.example.aplicaciongrupo7.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -7,6 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.data.Product
@@ -30,15 +33,14 @@ fun GameItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icono del artículo
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = "Icono de producto",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(40.dp)
+            Image(
+                painter = painterResource(id = game.imageRes),
+                contentDescription = "Imagen de ${game.title}",
+                modifier = Modifier
+                    .size(80.dp)
+                    .padding(end = 16.dp),
+                contentScale = ContentScale.Fit
             )
-
-            Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -55,7 +57,7 @@ fun GameItem(
                 // Rating y Stock
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "⭐ ${game.rating}/5.0",
+                        text = "${game.rating}/5.0",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -91,7 +93,6 @@ fun GameItem(
 
                 // Botones de acciones
                 Row {
-                    // Botón de agregar al carrito
                     if (onAddToCart != null && game.stock > 0) {
                         IconButton(
                             onClick = onAddToCart,
@@ -156,15 +157,14 @@ fun SimpleGameItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icono del producto
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = "Icono de producto",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(40.dp)
+            Image(
+                painter = painterResource(id = game.imageRes),
+                contentDescription = "Imagen de ${game.title}",
+                modifier = Modifier
+                    .size(80.dp)
+                    .padding(end = 16.dp),
+                contentScale = ContentScale.Fit
             )
-
-            Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -181,7 +181,7 @@ fun SimpleGameItem(
                 // Rating y Stock
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "⭐ ${game.rating}/5.0",
+                        text = "${game.rating}/5.0",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -193,7 +193,6 @@ fun SimpleGameItem(
                     )
                 }
 
-                // Mostrar cantidad en carrito si existe
                 if (cartQuantity > 0) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -204,7 +203,6 @@ fun SimpleGameItem(
                 }
             }
 
-            // Columna de precio y botón del carrito
             Column(
                 horizontalAlignment = Alignment.End
             ) {
@@ -215,7 +213,6 @@ fun SimpleGameItem(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Botón de agregar al carrito
                 if (onAddToCart != null && game.stock > 0) {
                     Spacer(modifier = Modifier.height(4.dp))
                     IconButton(
