@@ -47,7 +47,7 @@ fun CartScreen(onBack: () -> Unit) {
     val cartTotal by remember(cartItems) {
         derivedStateOf {
             cartItems.sumOf { cartItem ->
-                val priceString = cartItem.game.price
+                val priceString = cartItem.product.price
                     .replace("$", "")
                     .replace(".", "")
                     .replace(",", ".")
@@ -96,7 +96,7 @@ fun CartScreen(onBack: () -> Unit) {
                             onClick = {
                                 // Verificar stock antes de comprar
                                 val outOfStockItems = cartItems.filter {
-                                    it.quantity > it.game.stock
+                                    it.quantity > it.product.stock
                                 }
 
                                 if (outOfStockItems.isNotEmpty()) {
@@ -162,23 +162,23 @@ fun CartScreen(onBack: () -> Unit) {
                 ) {
                     items(
                         items = cartItems,
-                        key = { it.game.id }
+                        key = { it.product.id }
                     ) { cartItem ->
                         CartListItem(
                             cartItem = cartItem,
                             onQuantityChange = { newQuantity ->
-                                if (newQuantity <= cartItem.game.stock) {
-                                    cartManager.updateQuantity(cartItem.game.id, newQuantity)
+                                if (newQuantity <= cartItem.product.stock) {
+                                    cartManager.updateQuantity(cartItem.product.id, newQuantity)
                                 } else {
                                     scope.launch {
                                         snackbarHostState.showSnackbar(
-                                            "Stock máximo: ${cartItem.game.stock} unidades"
+                                            "Stock máximo: ${cartItem.product.stock} unidades"
                                         )
                                     }
                                 }
                             },
                             onRemove = {
-                                cartManager.removeFromCart(cartItem.game.id)
+                                cartManager.removeFromCart(cartItem.product.id)
                                 scope.launch {
                                     snackbarHostState.showSnackbar("Producto eliminado")
                                 }
@@ -209,8 +209,8 @@ fun CartListItem(
         ) {
             // Imagen del producto
             Image(
-                painter = painterResource(id = cartItem.game.imageRes),
-                contentDescription = cartItem.game.title,
+                painter = painterResource(id = cartItem.product.imageRes),
+                contentDescription = cartItem.product.title,
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(8.dp)),
@@ -224,7 +224,7 @@ fun CartListItem(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    cartItem.game.title,
+                    cartItem.product.title,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 2
                 )
@@ -232,7 +232,7 @@ fun CartListItem(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    cartItem.game.genre,
+                    cartItem.product.genre,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -246,7 +246,7 @@ fun CartListItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = cartItem.game.price,
+                        text = cartItem.product.price,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -270,7 +270,7 @@ fun CartListItem(
 
                         IconButton(
                             onClick = { onQuantityChange(cartItem.quantity + 1) },
-                            enabled = cartItem.quantity < cartItem.game.stock
+                            enabled = cartItem.quantity < cartItem.product.stock
                         ) {
                             Icon(
                                 Icons.Default.Add,
@@ -281,7 +281,7 @@ fun CartListItem(
                 }
 
                 // Información de stock
-                if (cartItem.quantity >= cartItem.game.stock) {
+                if (cartItem.quantity >= cartItem.product.stock) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Stock máximo alcanzado",

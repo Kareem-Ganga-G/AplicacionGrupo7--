@@ -21,47 +21,44 @@ class CartManager(private val context: Context) {
     private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
     val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
 
-    fun addToCart(gameId: Int, quantity: Int = 1) {
-        val currentQuantity = getProductQuantity(gameId)
+    fun addToCart(productId: Int, quantity: Int = 1) {
+        val currentQuantity = getProductQuantity(productId)
         val newQuantity = currentQuantity + quantity
 
         if (newQuantity > 0) {
-            sharedPreferences.edit().putInt("cart_$gameId", newQuantity).apply()
+            sharedPreferences.edit().putInt("cart_$productId", newQuantity).apply()
         }
-        // Actualizar StateFlow
         updateCartState()
     }
 
-    fun removeFromCart(gameId: Int) {
-        sharedPreferences.edit().remove("cart_$gameId").apply()
-        // Actualizar StateFlow
+    fun removeFromCart(productId: Int) {
+        sharedPreferences.edit().remove("cart_$productId").apply()
         updateCartState()
     }
 
-    fun updateQuantity(gameId: Int, newQuantity: Int) {
+    fun updateQuantity(productId: Int, newQuantity: Int) {
         if (newQuantity > 0) {
-            sharedPreferences.edit().putInt("cart_$gameId", newQuantity).apply()
+            sharedPreferences.edit().putInt("cart_$productId", newQuantity).apply()
         } else {
-            removeFromCart(gameId)
+            removeFromCart(productId)
         }
-        // Actualizar StateFlow
         updateCartState()
     }
 
-    fun getProductQuantity(gameId: Int): Int {
-        return sharedPreferences.getInt("cart_$gameId", 0)
+    fun getProductQuantity(productId: Int): Int {
+        return sharedPreferences.getInt("cart_$productId", 0)
     }
 
-    fun getCartItems(allGames: List<Game>): List<CartItem> {
+    fun getCartItems(allProducts: List<Product>): List<CartItem> {
         val cartItems = mutableListOf<CartItem>()
         val cartEntries = sharedPreferences.all.filterKeys { it.startsWith("cart_") }
 
         for ((key, value) in cartEntries) {
             if (value is Int) {
-                val gameId = key.removePrefix("cart_").toIntOrNull()
-                val game = allGames.find { it.id == gameId }
-                if (game != null && value > 0) {
-                    cartItems.add(CartItem(game, value))
+                val productId = key.removePrefix("cart_").toIntOrNull()
+                val product = allProducts.find { it.id == productId }
+                if (product != null && value > 0) {
+                    cartItems.add(CartItem(product, value)) // Cambiado de game a product
                 }
             }
         }
@@ -79,17 +76,16 @@ class CartManager(private val context: Context) {
         val editor = sharedPreferences.edit()
         keysToRemove.forEach { editor.remove(it) }
         editor.apply()
-        // Actualizar StateFlow
         updateCartState()
     }
 
-    fun isProductInCart(gameId: Int): Boolean {
-        return getProductQuantity(gameId) > 0
+    fun isProductInCart(productId: Int): Boolean {
+        return getProductQuantity(productId) > 0
     }
 
-    fun getCartTotal(allGames: List<Game>): Double {
-        return getCartItems(allGames).sumOf { cartItem ->
-            val priceString = cartItem.game.price
+    fun getCartTotal(allProducts: List<Product>): Double {
+        return getCartItems(allProducts).sumOf { cartItem ->
+            val priceString = cartItem.product.price // Cambiado de game a product
                 .replace("$", "")
                 .replace(".", "")
                 .replace(",", ".")
@@ -98,15 +94,12 @@ class CartManager(private val context: Context) {
         }
     }
 
-    // Función para actualizar el StateFlow cuando cambie el carrito
-    fun updateCartItems(allGames: List<Game>) {
-        _cartItems.value = getCartItems(allGames)
+    fun updateCartItems(allProducts: List<Product>) {
+        _cartItems.value = getCartItems(allProducts)
         _cartItemsCount.value = getCartItemsCount()
     }
 
-    // Función privada para actualizar el estado
     private fun updateCartState() {
         _cartItemsCount.value = getCartItemsCount()
-        // Nota: _cartItems se actualiza cuando se llama updateCartItems con la lista de juegos
     }
 }

@@ -44,8 +44,8 @@ fun AppNavigation() {
             userManager = userManager
         )
         "catalog" -> CatalogScreen(
-            onBack = { currentScreen = "login" },
-            onCartClick = { currentScreen = "cart" }
+            onLogout = { currentScreen = "login" },
+            onGoToCart = { currentScreen = "cart" }
         )
         "cart" -> CartScreen(
             onBack = { currentScreen = "catalog" }

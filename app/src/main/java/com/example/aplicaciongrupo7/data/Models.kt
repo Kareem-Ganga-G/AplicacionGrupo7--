@@ -19,6 +19,6 @@ data class Product(
 )
 
 data class CartItem(
-    val game: Game,
+    val product: Product,
     val quantity: Int = 1
 )

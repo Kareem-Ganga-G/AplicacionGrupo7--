@@ -22,7 +22,7 @@ import com.example.aplicaciongrupo7.data.GameManager
 @Composable
 fun CatalogScreen(
     onLogout: () -> Unit,
-    onGoToCart: () -> Unit  // Nuevo parámetro para navegar al carrito
+    onGoToCart: () -> Unit
 ) {
     val context = LocalContext.current
     val gameManager = remember { GameManager(context) }
@@ -32,7 +32,7 @@ fun CatalogScreen(
     var searchText by remember { mutableStateOf(TextFieldValue("")) }
     var sortOption by remember { mutableStateOf("nombre") }
 
-    // Estado del carrito
+    // Estado del carrito - CORREGIDO
     var cartItems by remember { mutableStateOf(cartManager.getCartItems(games)) }
     val cartItemsCount by remember { mutableStateOf(cartManager.getCartItemsCount()) }
 
@@ -174,7 +174,7 @@ fun CatalogScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Lista de los productos
+            // Lista de los productos - CORREGIDO
             if (filteredGames.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -214,9 +214,9 @@ fun CatalogScreen(
                         .padding(horizontal = 16.dp)
                 ) {
                     items(filteredGames) { game ->
-                        val cartItem = cartItems.find { it.game.id == game.id }
+                        val cartItem = cartItems.find { it.product.id == game.id }
                         SimpleGameItem(
-                            game = game,
+                            item = game, // ← Cambiado de 'product' a 'item'
                             onAddToCart = {
                                 cartManager.addToCart(game.id, 1)
                                 refreshCart()
