@@ -17,3 +17,8 @@ data class Game(
     val imageRes: Int,
     val stock: Int = 0,
 )
+
+data class CartItem(
+    val game: Game,
+    val quantity: Int = 1
+)

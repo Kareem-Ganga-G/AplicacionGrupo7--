@@ -4,12 +4,22 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class CartManager(private val context: Context) {
 
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences("cart_prefs", Context.MODE_PRIVATE)
     private val gson = Gson()
+
+    // StateFlow para observar los cambios del carrito
+    private val _cartItemsCount = MutableStateFlow(getCartItemsCount())
+    val cartItemsCount: StateFlow<Int> = _cartItemsCount.asStateFlow()
+
+    private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
+    val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
 
     fun addToCart(gameId: Int, quantity: Int = 1) {
         val currentQuantity = getProductQuantity(gameId)
@@ -18,10 +28,14 @@ class CartManager(private val context: Context) {
         if (newQuantity > 0) {
             sharedPreferences.edit().putInt("cart_$gameId", newQuantity).apply()
         }
+        // Actualizar StateFlow
+        updateCartState()
     }
 
     fun removeFromCart(gameId: Int) {
         sharedPreferences.edit().remove("cart_$gameId").apply()
+        // Actualizar StateFlow
+        updateCartState()
     }
 
     fun updateQuantity(gameId: Int, newQuantity: Int) {
@@ -30,6 +44,8 @@ class CartManager(private val context: Context) {
         } else {
             removeFromCart(gameId)
         }
+        // Actualizar StateFlow
+        updateCartState()
     }
 
     fun getProductQuantity(gameId: Int): Int {
@@ -63,6 +79,8 @@ class CartManager(private val context: Context) {
         val editor = sharedPreferences.edit()
         keysToRemove.forEach { editor.remove(it) }
         editor.apply()
+        // Actualizar StateFlow
+        updateCartState()
     }
 
     fun isProductInCart(gameId: Int): Boolean {
@@ -79,9 +97,16 @@ class CartManager(private val context: Context) {
             price * cartItem.quantity
         }
     }
-}
 
-data class CartItem(
-    val game: Game,
-    val quantity: Int
-)
+    // Función para actualizar el StateFlow cuando cambie el carrito
+    fun updateCartItems(allGames: List<Game>) {
+        _cartItems.value = getCartItems(allGames)
+        _cartItemsCount.value = getCartItemsCount()
+    }
+
+    // Función privada para actualizar el estado
+    private fun updateCartState() {
+        _cartItemsCount.value = getCartItemsCount()
+        // Nota: _cartItems se actualiza cuando se llama updateCartItems con la lista de juegos
+    }
+}

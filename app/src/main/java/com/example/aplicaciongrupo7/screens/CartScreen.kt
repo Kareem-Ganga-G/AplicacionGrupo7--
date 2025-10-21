@@ -31,12 +31,16 @@ fun CartScreen(onBack: () -> Unit) {
     val cartManager = remember { CartManager(context) }
 
     val allGames by remember { mutableStateOf(gameManager.getGames()) }
-    var cartItems by remember { mutableStateOf(cartManager.getCartItems(allGames)) }
+
+    // StateFlow para los items del carrito - ACTUALIZADO
+    val cartItems by cartManager.cartItems.collectAsState()
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    fun refreshCartItems() {
-        cartItems = cartManager.getCartItems(allGames)
+    // Actualizar el carrito cuando cambien los juegos
+    LaunchedEffect(allGames) {
+        cartManager.updateCartItems(allGames)
     }
 
     // Calcular el total del carrito
@@ -103,7 +107,6 @@ fun CartScreen(onBack: () -> Unit) {
                                     }
                                 } else {
                                     cartManager.clearCart()
-                                    refreshCartItems()
                                     scope.launch {
                                         snackbarHostState.showSnackbar("¡Compra realizada con éxito!")
                                     }
@@ -166,7 +169,6 @@ fun CartScreen(onBack: () -> Unit) {
                             onQuantityChange = { newQuantity ->
                                 if (newQuantity <= cartItem.game.stock) {
                                     cartManager.updateQuantity(cartItem.game.id, newQuantity)
-                                    refreshCartItems()
                                 } else {
                                     scope.launch {
                                         snackbarHostState.showSnackbar(
@@ -177,7 +179,6 @@ fun CartScreen(onBack: () -> Unit) {
                             },
                             onRemove = {
                                 cartManager.removeFromCart(cartItem.game.id)
-                                refreshCartItems()
                                 scope.launch {
                                     snackbarHostState.showSnackbar("Producto eliminado")
                                 }
@@ -251,7 +252,7 @@ fun CartListItem(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    // Controles de cantidad
+                    // Controles de cantidad - CORREGIDO (icono Remove agregado)
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
