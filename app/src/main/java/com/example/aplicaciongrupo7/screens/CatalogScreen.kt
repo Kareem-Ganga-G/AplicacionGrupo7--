@@ -70,7 +70,6 @@ fun CatalogScreen(
             SmallTopAppBar(
                 title = { Text("Catálogo Gamer") },
                 actions = {
-                    // Icono del carrito con badge
                     BadgedBox(
                         badge = {
                             if (cartItemsCount > 0) {
@@ -125,7 +124,6 @@ fun CatalogScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Opciones de ordenamiento
                     Text(
                         text = "Ordenar por:",
                         style = MaterialTheme.typography.labelMedium,
@@ -156,7 +154,7 @@ fun CatalogScreen(
                         FilterChip(
                             selected = sortOption == "genero",
                             onClick = { sortOption = "genero" },
-                            label = { Text("Categoría") } // Cambiado a "Categoría" para componentes
+                            label = { Text("Categoría") }
                         )
                     }
                 }
@@ -221,7 +219,7 @@ fun CatalogScreen(
                             game = game,
                             onAddToCart = {
                                 cartManager.addToCart(game.id, 1)
-                                refreshCart() // Actualizar el estado del carrito
+                                refreshCart()
                             },
                             cartQuantity = cartItem?.quantity ?: 0
                         )

@@ -36,7 +36,7 @@ class CartManager(private val context: Context) {
         return sharedPreferences.getInt("cart_$gameId", 0)
     }
 
-    fun getCartItems(allGames: List<Game>): List<CartItem> {
+    fun getCartItems(allGames: List<Product>): List<CartItem> {
         val cartItems = mutableListOf<CartItem>()
         val cartEntries = sharedPreferences.all.filterKeys { it.startsWith("cart_") }
 
@@ -69,7 +69,7 @@ class CartManager(private val context: Context) {
         return getProductQuantity(gameId) > 0
     }
 
-    fun getCartTotal(allGames: List<Game>): Double {
+    fun getCartTotal(allGames: List<Product>): Double {
         return getCartItems(allGames).sumOf { cartItem ->
             val priceString = cartItem.game.price
                 .replace("$", "")
@@ -82,6 +82,6 @@ class CartManager(private val context: Context) {
 }
 
 data class CartItem(
-    val game: Game,
+    val game: Product,
     val quantity: Int
 )

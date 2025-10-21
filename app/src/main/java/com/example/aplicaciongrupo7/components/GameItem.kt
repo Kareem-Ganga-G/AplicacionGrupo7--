@@ -9,11 +9,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.aplicaciongrupo7.data.Game
+import com.example.aplicaciongrupo7.data.Product
 
 @Composable
 fun GameItem(
-    game: Game,
+    game: Product,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onAddToCart: (() -> Unit)? = null,
@@ -142,7 +142,7 @@ fun GameItem(
 
 @Composable
 fun SimpleGameItem(
-    game: Game,
+    game: Product,
     onAddToCart: (() -> Unit)? = null,
     cartQuantity: Int = 0
 ) {
