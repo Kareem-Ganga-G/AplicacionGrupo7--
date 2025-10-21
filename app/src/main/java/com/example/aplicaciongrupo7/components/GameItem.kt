@@ -1,11 +1,8 @@
 package com.example.aplicaciongrupo7.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,6 +16,8 @@ fun GameItem(
     game: Game,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    onAddToCart: (() -> Unit)? = null,
+    cartQuantity: Int = 0,
     showAdminActions: Boolean = false
 ) {
     Card(
@@ -31,10 +30,10 @@ fun GameItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icono del articulo vendido (dejamos una estrella como inicio)
+            // Icono del artículo
             Icon(
                 imageVector = Icons.Default.Star,
-                contentDescription = "Icono de juego",
+                contentDescription = "Icono de producto",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(40.dp)
             )
@@ -52,13 +51,34 @@ fun GameItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = "Rating: ${game.rating}/5.0",
-                    style = MaterialTheme.typography.bodySmall
-                )
+
+                // Rating y Stock
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "⭐ ${game.rating}/5.0",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Stock: ${game.stock}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (game.stock > 0) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error
+                    )
+                }
+
+                // Mostrar cantidad en carrito si existe
+                if (cartQuantity > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$cartQuantity en carrito",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
-            // Acciones del administrador
+            // Columna de precio y acciones
             Column(
                 horizontalAlignment = Alignment.End
             ) {
@@ -69,29 +89,49 @@ fun GameItem(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Botones de administrador
-                if (showAdminActions && onEdit != null && onDelete != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row {
+                // Botones de acciones
+                Row {
+                    // Botón de agregar al carrito
+                    if (onAddToCart != null && game.stock > 0) {
                         IconButton(
-                            onClick = onEdit,
-                            modifier = Modifier.size(32.dp)
+                            onClick = onAddToCart,
+                            modifier = Modifier.size(32.dp),
+                            enabled = game.stock > 0
                         ) {
                             Icon(
-                                Icons.Default.Edit,
-                                contentDescription = "Editar juego",
-                                tint = MaterialTheme.colorScheme.primary
+                                Icons.Default.ShoppingCart,
+                                contentDescription = "Agregar al carrito",
+                                tint = if (game.stock > 0) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        IconButton(
-                            onClick = onDelete,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Eliminar juego",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+                    }
+
+                    // Botones de administrador
+                    if (showAdminActions) {
+                        if (onEdit != null) {
+                            IconButton(
+                                onClick = onEdit,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Editar producto",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        if (onDelete != null) {
+                            IconButton(
+                                onClick = onDelete,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Eliminar producto",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 }
@@ -100,9 +140,12 @@ fun GameItem(
     }
 }
 
-
 @Composable
-fun SimpleGameItem(game: Game) {
+fun SimpleGameItem(
+    game: Game,
+    onAddToCart: (() -> Unit)? = null,
+    cartQuantity: Int = 0
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -113,9 +156,10 @@ fun SimpleGameItem(game: Game) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Icono del producto
             Icon(
                 imageVector = Icons.Default.Star,
-                contentDescription = "Icono de juego",
+                contentDescription = "Icono de producto",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(40.dp)
             )
@@ -133,18 +177,61 @@ fun SimpleGameItem(game: Game) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = "Rating: ${game.rating}/5.0",
-                    style = MaterialTheme.typography.bodySmall
-                )
+
+                // Rating y Stock
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "⭐ ${game.rating}/5.0",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Stock: ${game.stock}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (game.stock > 0) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error
+                    )
+                }
+
+                // Mostrar cantidad en carrito si existe
+                if (cartQuantity > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$cartQuantity en carrito",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
-            Text(
-                text = game.price,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // Columna de precio y botón del carrito
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = game.price,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                // Botón de agregar al carrito
+                if (onAddToCart != null && game.stock > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    IconButton(
+                        onClick = onAddToCart,
+                        modifier = Modifier.size(32.dp),
+                        enabled = game.stock > 0
+                    ) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = "Agregar al carrito",
+                            tint = if (game.stock > 0) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }

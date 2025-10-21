@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,17 +15,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.components.SimpleGameItem
+import com.example.aplicaciongrupo7.data.CartManager
 import com.example.aplicaciongrupo7.data.GameManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CatalogScreen(onLogout: () -> Unit) {
+fun CatalogScreen(
+    onLogout: () -> Unit,
+    onGoToCart: () -> Unit  // Nuevo parámetro para navegar al carrito
+) {
     val context = LocalContext.current
     val gameManager = remember { GameManager(context) }
+    val cartManager = remember { CartManager(context) }
+
     val games by remember { mutableStateOf(gameManager.getGames()) }
     var searchText by remember { mutableStateOf(TextFieldValue("")) }
     var sortOption by remember { mutableStateOf("nombre") }
 
+    // Estado del carrito
+    var cartItems by remember { mutableStateOf(cartManager.getCartItems(games)) }
+    val cartItemsCount by remember { mutableStateOf(cartManager.getCartItemsCount()) }
 
     val filteredGames = remember(games, searchText.text, sortOption) {
         var result = games
@@ -50,11 +60,37 @@ fun CatalogScreen(onLogout: () -> Unit) {
         result
     }
 
+    // Función para actualizar el carrito
+    fun refreshCart() {
+        cartItems = cartManager.getCartItems(games)
+    }
+
     Scaffold(
         topBar = {
             SmallTopAppBar(
                 title = { Text("Catálogo Gamer") },
                 actions = {
+                    // Icono del carrito con badge
+                    BadgedBox(
+                        badge = {
+                            if (cartItemsCount > 0) {
+                                Badge {
+                                    Text(
+                                        cartItemsCount.toString(),
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        IconButton(onClick = onGoToCart) {
+                            Icon(
+                                Icons.Default.ShoppingCart,
+                                contentDescription = "Carrito de compras"
+                            )
+                        }
+                    }
+
                     IconButton(onClick = onLogout) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar Sesión")
                     }
@@ -120,7 +156,7 @@ fun CatalogScreen(onLogout: () -> Unit) {
                         FilterChip(
                             selected = sortOption == "genero",
                             onClick = { sortOption = "genero" },
-                            label = { Text("Género") }
+                            label = { Text("Categoría") } // Cambiado a "Categoría" para componentes
                         )
                     }
                 }
@@ -176,10 +212,19 @@ fun CatalogScreen(onLogout: () -> Unit) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
+                        .weight(1f)
                         .padding(horizontal = 16.dp)
                 ) {
                     items(filteredGames) { game ->
-                        SimpleGameItem(game = game)
+                        val cartItem = cartItems.find { it.game.id == game.id }
+                        SimpleGameItem(
+                            game = game,
+                            onAddToCart = {
+                                cartManager.addToCart(game.id, 1)
+                                refreshCart() // Actualizar el estado del carrito
+                            },
+                            cartQuantity = cartItem?.quantity ?: 0
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }

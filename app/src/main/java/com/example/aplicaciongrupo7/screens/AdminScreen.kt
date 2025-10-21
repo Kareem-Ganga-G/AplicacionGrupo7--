@@ -3,13 +3,17 @@ package com.example.aplicaciongrupo7.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType // Importa KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.components.GameItem
 import com.example.aplicaciongrupo7.data.Game
@@ -195,6 +199,8 @@ fun GameEditDialog(
     var genre by remember { mutableStateOf(game?.genre ?: "") }
     var price by remember { mutableStateOf(game?.price ?: "") }
     var rating by remember { mutableStateOf(game?.rating?.toString() ?: "4.0") }
+    // 1. CREAR EL ESTADO PARA EL STOCK
+    var stock by remember { mutableStateOf(game?.stock?.toString() ?: "0") }
     var errorMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(game) {
@@ -202,6 +208,8 @@ fun GameEditDialog(
         genre = game?.genre ?: ""
         price = game?.price ?: ""
         rating = game?.rating?.toString() ?: "4.0"
+        // Reiniciar stock también
+        stock = game?.stock?.toString() ?: "0"
         errorMessage = ""
     }
 
@@ -254,21 +262,41 @@ fun GameEditDialog(
                     label = { Text("Precio *") },
                     placeholder = { Text("Ej: $59.99") },
                     modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessage.isNotEmpty()
+                    isError = errorMessage.isNotEmpty(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = rating,
                     onValueChange = {
                         // Validación manual para solo permitir números y punto decimal
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) {
+                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,1}$"))) { // Mejorado
                             rating = it
                             errorMessage = ""
                         }
                     },
                     label = { Text("Rating (0.0 - 5.0)") },
                     modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessage.isNotEmpty()
+                    isError = errorMessage.isNotEmpty(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp)) // Espacio antes del nuevo campo
+
+                // 2. AÑADIR EL CAMPO (TEXTFIELD) PARA EL STOCK
+                OutlinedTextField(
+                    value = stock,
+                    onValueChange = {
+                        // Permite solo dígitos
+                        if (it.all { char -> char.isDigit() }) {
+                            stock = it
+                            errorMessage = ""
+                        }
+                    },
+                    label = { Text("Stock *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = errorMessage.isNotEmpty(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -282,18 +310,22 @@ fun GameEditDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    val stockInt = stock.toIntOrNull()
                     when {
-                        title.isEmpty() || genre.isEmpty() || price.isEmpty() -> {
+                        title.isBlank() || genre.isBlank() || price.isBlank() || stock.isBlank() -> { // isBlank() es mejor que isEmpty()
                             errorMessage = "Por favor completa todos los campos obligatorios"
                         }
                         rating.toFloatOrNull() == null -> {
                             errorMessage = "El rating debe ser un número válido"
                         }
-                        rating.toFloat() !in 0f..5f -> {
+                        rating.toFloat() !in 0.0f..5.0f -> {
                             errorMessage = "El rating debe estar entre 0.0 y 5.0"
                         }
                         !price.startsWith("$") -> {
-                            errorMessage = "El precio debe empezar con $ (Ej: \$59.990)"
+                            errorMessage = "El precio debe empezar con $ (Ej: \$59.99)"
+                        }
+                        stockInt == null || stockInt < 0 -> {
+                            errorMessage = "El stock debe ser un número entero válido y no negativo"
                         }
                         else -> {
                             val newGame = Game(
@@ -301,13 +333,17 @@ fun GameEditDialog(
                                 title = title.trim(),
                                 genre = genre.trim(),
                                 price = price.trim(),
-                                rating = rating.toFloat()
+                                rating = rating.toFloat(),
+                                imageRes = game?.imageRes ?: com.example.aplicaciongrupo7.R.drawable.procesador_amd_ryzen9,
+                                // 3. USAR EL VALOR DEL ESTADO CONVERTIDO A ENTERO
+                                stock = stockInt
                             )
                             onSave(newGame)
                         }
                     }
                 },
-                enabled = title.isNotEmpty() && genre.isNotEmpty() && price.isNotEmpty()
+                // Habilitar botón solo si todos los campos requeridos tienen texto
+                enabled = title.isNotBlank() && genre.isNotBlank() && price.isNotBlank() && stock.isNotBlank()
             ) {
                 Text(if (game == null) "Agregar" else "Guardar Cambios")
             }

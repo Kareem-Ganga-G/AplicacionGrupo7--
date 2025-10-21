@@ -13,5 +13,7 @@ data class Game(
     val genre: String,
     val price: String,
     val rating: Float,
-    val description: String = ""
+    val description: String = "",
+    val imageRes: Int,
+    val stock: Int = 0,
 )

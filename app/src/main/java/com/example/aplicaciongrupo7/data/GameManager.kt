@@ -3,24 +3,24 @@ package com.example.aplicaciongrupo7.data
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
-
+import com.example.aplicaciongrupo7.R
 class GameManager(private val context: Context) {
     private val sharedPreferences = context.getSharedPreferences("game_prefs", Context.MODE_PRIVATE)
     private val gamesKey = "games_list"
 
     // Listapor defecto
     private val defaultGames = listOf(
-        Game(1, "AMD Ryzen 9 7950X", "Procesador", "$699.990", 4.8f, "16 núcleos, 4.5GHz"),
-        Game(2, "Intel Core i9-14900K", "Procesador", "$589.990", 4.6f, "24 núcleos, 6.0GHz"),
-        Game(3, "AMD Ryzen 7 7800X3D", "Procesador", "$449.990", 4.9f, "8 núcleos, 5.0GHz"),
-        Game(4, "NVIDIA GeForce RTX 4090", "Tarjeta Gráfica", "$1599.990", 4.7f, "24GB GDDR6X"),
-        Game(5, "AMD Radeon RX 7900 XTX", "Tarjeta Gráfica", "$999.990", 4.5f, "24GB GDDR6"),
-        Game(6, "NVIDIA GeForce RTX 4070 Ti", "Tarjeta Gráfica", "$799.990", 4.4f, "12GB GDDR6X"),
-        Game(7, "Samsung Odyssey G9", "Monitor", "$1299.990", 4.8f, "49 Curvo 240Hz"),
-        Game(8, "ASUS ROG Swift PG279QM", "Monitor", "$899.990", 4.6f, "27 1440p 240Hz"),
-        Game(9, "Alienware AW3423DW", "Monitor", "$1199.990", 4.9f, "34 OLED 175Hz"),
-        Game(10, "Corsair Dominator Platinum", "Memoria RAM", "$249.990", 4.7f, "32GB DDR5 6000MHz"),
-        Game(11, "G.Skill Trident Z5 RGB", "Memoria RAM", "$199.990", 4.5f, "32GB DDR5 5600MHz"),
+        Game(1, "AMD Ryzen 9 7950X", "Procesador", "$699.990", 4.8f, "16 núcleos, 4.5GHz", R.drawable.procesador_amd_ryzen9, stock = 10),
+        Game(2, "Intel Core i9-14900K", "Procesador", "$589.990", 4.6f, "24 núcleos, 6.0GHz", R.drawable.procesador_intel_i9, stock = 10),
+        Game(3, "AMD Ryzen 7 7800X3D", "Procesador", "$449.990", 4.9f, "8 núcleos, 5.0GHz", R.drawable.procesador_amd_ryzen7, stock = 15),
+        Game(4, "NVIDIA GeForce RTX 4090", "Tarjeta Gráfica", "$1599.990", 4.7f, "24GB GDDR6X", R.drawable.gpu_rtx4090, stock = 5),
+        Game(5, "AMD Radeon RX 7900 XTX", "Tarjeta Gráfica", "$999.990", 4.5f, "24GB GDDR6", R.drawable.gpu_amd_radeon, stock = 8),
+        Game(6, "NVIDIA GeForce RTX 4070 Ti", "Tarjeta Gráfica", "$799.990", 4.4f, "12GB GDDR6X", R.drawable.gpu_rtx4070, stock = 12),
+        Game(7, "Samsung Odyssey G9", "Monitor", "$1299.990", 4.8f, "49 Curvo 240Hz", R.drawable.monitor_samsung_odyssey, stock = 7),
+        Game(8, "ASUS ROG Swift PG279QM", "Monitor", "$899.990", 4.6f, "27 1440p 240Hz", R.drawable.monitor_asus_rog, stock = 10),
+        Game(9, "Alienware AW3423DW", "Monitor", "$1199.990", 4.9f, "34 OLED 175Hz", R.drawable.monitor_alienware, stock = 6),
+        Game(10, "Corsair Dominator Platinum", "Memoria RAM", "$249.990", 4.7f, "32GB DDR5 6000MHz", R.drawable.ram_corsair_dominator, stock = 20),
+        Game(11, "G.Skill Trident Z5 RGB", "Memoria RAM", "$199.990", 4.5f, "32GB DDR5 5600MHz", R.drawable.ram_gskill_trident, stock = 25)
     )
 
     fun getGames(): List<Game> {
@@ -87,7 +87,9 @@ class GameManager(private val context: Context) {
                     title = jsonObject.getString("title"),
                     genre = jsonObject.getString("genre"),
                     price = jsonObject.getString("price"),
-                    rating = jsonObject.getDouble("rating").toFloat()
+                    rating = jsonObject.getDouble("rating").toFloat(),
+                    imageRes = jsonObject.optInt("imageRes"),
+                    stock = jsonObject.optInt("stock")
                 )
                 games.add(game)
             }
