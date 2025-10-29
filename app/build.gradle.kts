@@ -42,5 +42,20 @@ dependencies {
 
     // Si necesitas navigation para Compose
     implementation("androidx.navigation:navigation-compose:2.7.3")
+    //Kotest
+    testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
+    testImplementation("io.kotest:kotest-assertions-core:5.8.0")
+
+    //Junit 5
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+
+    //MockN
+    testImplementation("io.mockk:mockk:1.13.10")
+
+    //Compose UI test
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.2")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.2")
+
+
 
 }
