@@ -1,32 +1,37 @@
 package com.example.aplicaciongrupo7.data
 
+import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 
 class UserManager(private val context: Context) {
-    private val sharedPreferences = context.getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
-    private val gson = Gson()
+    private val databaseHelper = AppDatabaseHelper(context)
 
-    // Cambia el nombre para evitar conflicto
     private var _currentUser by mutableStateOf<User?>(null)
-
-    // Propiedad pública para acceder al usuario actual
     val currentUser: User?
         get() = _currentUser
 
     init {
-        // Crear usuario admin automáticamente al inicializar
         createAdminUserIfNeeded()
     }
 
-    // Crear usuario admin si no existe
     private fun createAdminUserIfNeeded() {
-        val users = getUsers()
-        val adminExists = users.any { it.email == "p.lopez@duocuc.cl" }
+        val db = databaseHelper.readableDatabase
+        val cursor = db.query(
+            DatabaseContract.UserEntry.TABLE_NAME,
+            null,
+            "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ?",
+            arrayOf("p.lopez@duocuc.cl"),
+            null, null, null
+        )
+
+        val adminExists = cursor.count > 0
+        cursor.close()
+        db.close()
 
         if (!adminExists) {
             val adminUser = User(
@@ -35,124 +40,197 @@ class UserManager(private val context: Context) {
                 email = "p.lopez@duocuc.cl",
                 isAdmin = true
             )
-
-            val updatedUsers = users.toMutableList()
-            updatedUsers.add(adminUser)
-            saveUsers(updatedUsers)
+            saveUser(adminUser)
         }
     }
 
-    // Guardar múltiples usuarios
     fun saveUser(user: User): Boolean {
-        return try {
-            val users = getUsers().toMutableList()
+        val db = databaseHelper.writableDatabase
 
-            // Verificar si el usuario ya existe
-            if (users.any { it.username == user.username }) {
-                return false
-            }
-            if (users.any { it.email.equals(user.email, ignoreCase = true) }) {
-                return false
-            }
+        // Verificar si usuario ya existe
+        if (userExists(user.username) || emailExists(user.email)) {
+            db.close()
+            return false
+        }
 
-            users.add(user)
-            saveUsers(users)
+        val values = ContentValues().apply {
+            put(DatabaseContract.UserEntry.COLUMN_USERNAME, user.username)
+            put(DatabaseContract.UserEntry.COLUMN_EMAIL, user.email)
+            put(DatabaseContract.UserEntry.COLUMN_PASSWORD, user.password)
+            put(DatabaseContract.UserEntry.COLUMN_IS_ADMIN, if (user.isAdmin) 1 else 0)
+        }
+
+        val result = db.insert(DatabaseContract.UserEntry.TABLE_NAME, null, values)
+        db.close()
+
+        if (result != -1L) {
             _currentUser = user
-            true
-        } catch (e: Exception) {
-            false
+            return true
         }
+        return false
     }
 
-    // Eliminar usuario - NUEVO MÉTODO
     fun deleteUser(username: String): Boolean {
-        return try {
-            val users = getUsers().toMutableList()
-            val userToDelete = users.find { it.username == username }
+        val db = databaseHelper.writableDatabase
 
-            if (userToDelete != null) {
-                // No permitir eliminar al admin principal
-                if (userToDelete.email == "p.lopez@duocuc.cl") {
-                    return false
-                }
-
-                users.remove(userToDelete)
-                saveUsers(users)
-
-                // Si el usuario eliminado es el actual, cerrar sesión
-                if (_currentUser?.username == username) {
-                    _currentUser = null
-                }
-                true
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            false
+        // No permitir eliminar admin principal
+        if (username == "p.lopez") {
+            db.close()
+            return false
         }
+
+        val result = db.delete(
+            DatabaseContract.UserEntry.TABLE_NAME,
+            "${DatabaseContract.UserEntry.COLUMN_USERNAME} = ?",
+            arrayOf(username)
+        )
+        db.close()
+
+        if (result > 0 && _currentUser?.username == username) {
+            _currentUser = null
+        }
+        return result > 0
     }
 
-    // Obtener todos los usuarios
     fun getUsers(): List<User> {
-        val usersJson = sharedPreferences.getString("users", "[]")
-        val type = object : TypeToken<List<User>>() {}.type
-        return gson.fromJson(usersJson, type) ?: emptyList()
-    }
+        val db = databaseHelper.readableDatabase
+        val users = mutableListOf<User>()
 
-    // Login con username
-    fun validateLogin(username: String, password: String): Boolean {
-        val users = getUsers()
-        val user = users.find { it.username == username && it.password == password }
-        _currentUser = user
-        return user != null
-    }
+        val cursor = db.query(
+            DatabaseContract.UserEntry.TABLE_NAME,
+            null, null, null, null, null,
+            "${DatabaseContract.UserEntry.COLUMN_USERNAME} ASC"
+        )
 
-    // Login con email
-    fun loginWithEmail(email: String, password: String): Boolean {
-        val users = getUsers()
-        val user = users.find {
-            it.email.equals(email, ignoreCase = true) && it.password == password
+        while (cursor.moveToNext()) {
+            val user = cursorToUser(cursor)
+            users.add(user)
         }
+
+        cursor.close()
+        db.close()
+        return users
+    }
+
+    fun validateLogin(username: String, password: String): Boolean {
+        val db = databaseHelper.readableDatabase
+        val cursor = db.query(
+            DatabaseContract.UserEntry.TABLE_NAME,
+            null,
+            "${DatabaseContract.UserEntry.COLUMN_USERNAME} = ? AND ${DatabaseContract.UserEntry.COLUMN_PASSWORD} = ?",
+            arrayOf(username, password),
+            null, null, null
+        )
+
+        val user = if (cursor.moveToFirst()) {
+            cursorToUser(cursor)
+        } else {
+            null
+        }
+
+        cursor.close()
+        db.close()
+
         _currentUser = user
         return user != null
     }
 
-    // Verificar si usuario existe
+    fun loginWithEmail(email: String, password: String): Boolean {
+        val db = databaseHelper.readableDatabase
+        val cursor = db.query(
+            DatabaseContract.UserEntry.TABLE_NAME,
+            null,
+            "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ? AND ${DatabaseContract.UserEntry.COLUMN_PASSWORD} = ?",
+            arrayOf(email, password),
+            null, null, null
+        )
+
+        val user = if (cursor.moveToFirst()) {
+            cursorToUser(cursor)
+        } else {
+            null
+        }
+
+        cursor.close()
+        db.close()
+
+        _currentUser = user
+        return user != null
+    }
+
     fun userExists(username: String): Boolean {
-        return getUsers().any { it.username == username }
+        val db = databaseHelper.readableDatabase
+        val cursor = db.query(
+            DatabaseContract.UserEntry.TABLE_NAME,
+            null,
+            "${DatabaseContract.UserEntry.COLUMN_USERNAME} = ?",
+            arrayOf(username),
+            null, null, null
+        )
+
+        val exists = cursor.count > 0
+        cursor.close()
+        db.close()
+        return exists
     }
 
-    // Verificar si email existe
     fun emailExists(email: String): Boolean {
-        return getUsers().any { it.email.equals(email, ignoreCase = true) }
+        val db = databaseHelper.readableDatabase
+        val cursor = db.query(
+            DatabaseContract.UserEntry.TABLE_NAME,
+            null,
+            "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ?",
+            arrayOf(email),
+            null, null, null
+        )
+
+        val exists = cursor.count > 0
+        cursor.close()
+        db.close()
+        return exists
     }
 
-    // Verificar si un email es de administrador
     fun isAdminEmail(email: String): Boolean {
         return email.endsWith("@duocuc.cl", ignoreCase = true)
     }
 
-    // Para compatibilidad con tu código existente
     fun getUser(): User? {
         return _currentUser
     }
 
     fun isUserRegistered(): Boolean {
-        return getUsers().isNotEmpty()
+        val db = databaseHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT COUNT(*) FROM ${DatabaseContract.UserEntry.TABLE_NAME}",
+            null
+        )
+
+        val count = if (cursor.moveToFirst()) {
+            cursor.getInt(0)
+        } else {
+            0
+        }
+
+        cursor.close()
+        db.close()
+        return count > 0
     }
 
     fun logout() {
         _currentUser = null
     }
 
-    // Función privada para guardar la lista de usuarios
-    private fun saveUsers(users: List<User>) {
-        val usersJson = gson.toJson(users)
-        sharedPreferences.edit().putString("users", usersJson).apply()
+    private fun cursorToUser(cursor: Cursor): User {
+        return User(
+            username = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.UserEntry.COLUMN_USERNAME)),
+            password = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.UserEntry.COLUMN_PASSWORD)),
+            email = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.UserEntry.COLUMN_EMAIL)),
+            isAdmin = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.UserEntry.COLUMN_IS_ADMIN)) == 1
+        )
     }
 }
 
-// Función de validación de email
+// Función de validación de email (se mantiene igual)
 fun isValidEmail(email: String): Boolean {
     val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
     return email.matches(emailRegex)

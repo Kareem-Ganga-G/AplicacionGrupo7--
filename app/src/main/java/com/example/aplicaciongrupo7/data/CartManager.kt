@@ -1,18 +1,15 @@
 package com.example.aplicaciongrupo7.data
 
+import android.content.ContentValues
 import android.content.Context
-import android.content.SharedPreferences
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class CartManager(private val context: Context) {
-
-    private val sharedPreferences: SharedPreferences =
-        context.getSharedPreferences("cart_prefs", Context.MODE_PRIVATE)
-    private val gson = Gson()
+    private val databaseHelper = AppDatabaseHelper(context)
 
     // StateFlow para observar los cambios del carrito
     private val _cartItemsCount = MutableStateFlow(getCartItemsCount())
@@ -22,23 +19,58 @@ class CartManager(private val context: Context) {
     val cartItems: StateFlow<List<CartItem>> = _cartItems.asStateFlow()
 
     fun addToCart(productId: Int, quantity: Int = 1) {
+        val db = databaseHelper.writableDatabase
+
+        // Verificar si el producto ya está en el carrito
         val currentQuantity = getProductQuantity(productId)
         val newQuantity = currentQuantity + quantity
 
-        if (newQuantity > 0) {
-            sharedPreferences.edit().putInt("cart_$productId", newQuantity).apply()
+        val values = ContentValues().apply {
+            put(DatabaseContract.CartEntry.COLUMN_PRODUCT_ID, productId)
+            put(DatabaseContract.CartEntry.COLUMN_QUANTITY, newQuantity)
         }
+
+        if (currentQuantity > 0) {
+            // Actualizar cantidad existente
+            db.update(
+                DatabaseContract.CartEntry.TABLE_NAME,
+                values,
+                "${DatabaseContract.CartEntry.COLUMN_PRODUCT_ID} = ?",
+                arrayOf(productId.toString())
+            )
+        } else {
+            // Insertar nuevo producto
+            db.insert(DatabaseContract.CartEntry.TABLE_NAME, null, values)
+        }
+
+        db.close()
         updateCartState()
     }
 
     fun removeFromCart(productId: Int) {
-        sharedPreferences.edit().remove("cart_$productId").apply()
+        val db = databaseHelper.writableDatabase
+        db.delete(
+            DatabaseContract.CartEntry.TABLE_NAME,
+            "${DatabaseContract.CartEntry.COLUMN_PRODUCT_ID} = ?",
+            arrayOf(productId.toString())
+        )
+        db.close()
         updateCartState()
     }
 
     fun updateQuantity(productId: Int, newQuantity: Int) {
         if (newQuantity > 0) {
-            sharedPreferences.edit().putInt("cart_$productId", newQuantity).apply()
+            val db = databaseHelper.writableDatabase
+            val values = ContentValues().apply {
+                put(DatabaseContract.CartEntry.COLUMN_QUANTITY, newQuantity)
+            }
+            db.update(
+                DatabaseContract.CartEntry.TABLE_NAME,
+                values,
+                "${DatabaseContract.CartEntry.COLUMN_PRODUCT_ID} = ?",
+                arrayOf(productId.toString())
+            )
+            db.close()
         } else {
             removeFromCart(productId)
         }
@@ -46,36 +78,76 @@ class CartManager(private val context: Context) {
     }
 
     fun getProductQuantity(productId: Int): Int {
-        return sharedPreferences.getInt("cart_$productId", 0)
+        val db = databaseHelper.readableDatabase
+        val cursor = db.query(
+            DatabaseContract.CartEntry.TABLE_NAME,
+            arrayOf(DatabaseContract.CartEntry.COLUMN_QUANTITY),
+            "${DatabaseContract.CartEntry.COLUMN_PRODUCT_ID} = ?",
+            arrayOf(productId.toString()),
+            null, null, null
+        )
+
+        val quantity = if (cursor.moveToFirst()) {
+            cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.CartEntry.COLUMN_QUANTITY))
+        } else {
+            0
+        }
+
+        cursor.close()
+        db.close()
+        return quantity
     }
 
     fun getCartItems(allProducts: List<Product>): List<CartItem> {
+        val db = databaseHelper.readableDatabase
         val cartItems = mutableListOf<CartItem>()
-        val cartEntries = sharedPreferences.all.filterKeys { it.startsWith("cart_") }
 
-        for ((key, value) in cartEntries) {
-            if (value is Int) {
-                val productId = key.removePrefix("cart_").toIntOrNull()
-                val product = allProducts.find { it.id == productId }
-                if (product != null && value > 0) {
-                    cartItems.add(CartItem(product, value)) // Cambiado de game a product
-                }
+        val cursor = db.query(
+            DatabaseContract.CartEntry.TABLE_NAME,
+            arrayOf(
+                DatabaseContract.CartEntry.COLUMN_PRODUCT_ID,
+                DatabaseContract.CartEntry.COLUMN_QUANTITY
+            ),
+            null, null, null, null, null
+        )
+
+        while (cursor.moveToNext()) {
+            val productId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.CartEntry.COLUMN_PRODUCT_ID))
+            val quantity = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.CartEntry.COLUMN_QUANTITY))
+
+            val product = allProducts.find { it.id == productId }
+            if (product != null && quantity > 0) {
+                cartItems.add(CartItem(product, quantity))
             }
         }
+
+        cursor.close()
+        db.close()
         return cartItems
     }
 
     fun getCartItemsCount(): Int {
-        return sharedPreferences.all.values
-            .filterIsInstance<Int>()
-            .sum()
+        val db = databaseHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT SUM(${DatabaseContract.CartEntry.COLUMN_QUANTITY}) as total FROM ${DatabaseContract.CartEntry.TABLE_NAME}",
+            null
+        )
+
+        val total = if (cursor.moveToFirst()) {
+            cursor.getInt(cursor.getColumnIndexOrThrow("total"))
+        } else {
+            0
+        }
+
+        cursor.close()
+        db.close()
+        return total
     }
 
     fun clearCart() {
-        val keysToRemove = sharedPreferences.all.keys.filter { it.startsWith("cart_") }
-        val editor = sharedPreferences.edit()
-        keysToRemove.forEach { editor.remove(it) }
-        editor.apply()
+        val db = databaseHelper.writableDatabase
+        db.delete(DatabaseContract.CartEntry.TABLE_NAME, null, null)
+        db.close()
         updateCartState()
     }
 
@@ -85,7 +157,7 @@ class CartManager(private val context: Context) {
 
     fun getCartTotal(allProducts: List<Product>): Double {
         return getCartItems(allProducts).sumOf { cartItem ->
-            val priceString = cartItem.product.price // Cambiado de game a product
+            val priceString = cartItem.product.price
                 .replace("$", "")
                 .replace(".", "")
                 .replace(",", ".")

@@ -1,107 +1,150 @@
 package com.example.aplicaciongrupo7.data
 
+import android.content.ContentValues
 import android.content.Context
-import org.json.JSONArray
-import org.json.JSONObject
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import com.example.aplicaciongrupo7.R
 
 class GameManager(private val context: Context) {
-    private val sharedPreferences = context.getSharedPreferences("game_prefs", Context.MODE_PRIVATE)
-    private val gamesKey = "games_list"
-
-    // Lista por defecto
-    private val defaultGames = listOf(
-        Product(1, "AMD Ryzen 9 7950X", "Procesador", "$699.990", 4.8f, "16 núcleos, 4.5GHz", R.drawable.procesador_amd_ryzen9, stock = 10),
-        Product(2, "Intel Core i9-14900K", "Procesador", "$589.990", 4.6f, "24 núcleos, 6.0GHz", R.drawable.procesador_intel_i9, stock = 10),
-        Product(3, "AMD Ryzen 7 7800X3D", "Procesador", "$449.990", 4.9f, "8 núcleos, 5.0GHz", R.drawable.procesador_amd_ryzen7, stock = 15),
-        Product(4, "NVIDIA GeForce RTX 4090", "Tarjeta Gráfica", "$1599.990", 4.7f, "24GB GDDR6X", R.drawable.gpu_rtx4090, stock = 5),
-        Product(5, "AMD Radeon RX 7900 XTX", "Tarjeta Gráfica", "$999.990", 4.5f, "24GB GDDR6", R.drawable.gpu_amd_radeon, stock = 8),
-        Product(6, "NVIDIA GeForce RTX 4070 Ti", "Tarjeta Gráfica", "$799.990", 4.4f, "12GB GDDR6X", R.drawable.gpu_rtx4070, stock = 12),
-        Product(7, "Samsung Odyssey G9", "Monitor", "$1299.990", 4.8f, "49 Curvo 240Hz", R.drawable.monitor_samsung_odyssey, stock = 7),
-        Product(8, "ASUS ROG Swift PG279QM", "Monitor", "$899.990", 4.6f, "27 1440p 240Hz", R.drawable.monitor_asus_rog, stock = 10),
-        Product(9, "Alienware AW3423DW", "Monitor", "$1199.990", 4.9f, "34 OLED 175Hz", R.drawable.monitor_alienware, stock = 6),
-        Product(10, "Corsair Dominator Platinum", "Memoria RAM", "$249.990", 4.7f, "32GB DDR5 6000MHz", R.drawable.ram_corsair_dominator, stock = 20),
-        Product(11, "G.Skill Trident Z5 RGB", "Memoria RAM", "$199.990", 4.5f, "32GB DDR5 5600MHz", R.drawable.ram_gskill_trident, stock = 25)
-    )
+    private val databaseHelper = AppDatabaseHelper(context)
 
     fun getGames(): List<Product> {
-        val gamesJson = sharedPreferences.getString(gamesKey, null)
-        return if (gamesJson != null) {
-            parseGamesFromJson(gamesJson)
-        } else {
-            saveGames(defaultGames)
-            defaultGames
+        val db = databaseHelper.readableDatabase
+        val products = mutableListOf<Product>()
+
+        val cursor = db.query(
+            DatabaseContract.ProductEntry.TABLE_NAME,
+            null, null, null, null, null,
+            "${DatabaseContract.ProductEntry.COLUMN_ID} ASC"
+        )
+
+        while (cursor.moveToNext()) {
+            val product = cursorToProduct(cursor)
+            products.add(product)
         }
+
+        cursor.close()
+        db.close()
+        return products
     }
 
     fun addGame(game: Product) {
-        val currentGames = getGames().toMutableList()
-        val newId = (currentGames.maxOfOrNull { it.id } ?: 0) + 1
-        val newGame = game.copy(id = newId)
-        currentGames.add(newGame)
-        saveGames(currentGames)
+        val db = databaseHelper.writableDatabase
+
+        // Obtener el siguiente ID disponible
+        val nextId = getNextProductId(db)
+        val newGame = game.copy(id = nextId)
+
+        val values = ContentValues().apply {
+            put(DatabaseContract.ProductEntry.COLUMN_ID, newGame.id)
+            put(DatabaseContract.ProductEntry.COLUMN_TITLE, newGame.title)
+            put(DatabaseContract.ProductEntry.COLUMN_GENRE, newGame.genre)
+            put(DatabaseContract.ProductEntry.COLUMN_PRICE, newGame.price)
+            put(DatabaseContract.ProductEntry.COLUMN_RATING, newGame.rating.toDouble())
+            put(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION, newGame.description)
+            put(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES, newGame.imageRes)
+            put(DatabaseContract.ProductEntry.COLUMN_STOCK, newGame.stock)
+        }
+
+        db.insert(DatabaseContract.ProductEntry.TABLE_NAME, null, values)
+        db.close()
     }
 
     fun updateGame(updatedGame: Product) {
-        val currentGames = getGames().toMutableList()
-        val index = currentGames.indexOfFirst { it.id == updatedGame.id }
-        if (index != -1) {
-            currentGames[index] = updatedGame
-            saveGames(currentGames)
+        val db = databaseHelper.writableDatabase
+
+        val values = ContentValues().apply {
+            put(DatabaseContract.ProductEntry.COLUMN_TITLE, updatedGame.title)
+            put(DatabaseContract.ProductEntry.COLUMN_GENRE, updatedGame.genre)
+            put(DatabaseContract.ProductEntry.COLUMN_PRICE, updatedGame.price)
+            put(DatabaseContract.ProductEntry.COLUMN_RATING, updatedGame.rating.toDouble())
+            put(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION, updatedGame.description)
+            put(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES, updatedGame.imageRes)
+            put(DatabaseContract.ProductEntry.COLUMN_STOCK, updatedGame.stock)
         }
+
+        db.update(
+            DatabaseContract.ProductEntry.TABLE_NAME,
+            values,
+            "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
+            arrayOf(updatedGame.id.toString())
+        )
+        db.close()
     }
 
     fun deleteGame(gameId: Int) {
-        val currentGames = getGames().toMutableList()
-        currentGames.removeAll { it.id == gameId }
-        saveGames(currentGames)
+        val db = databaseHelper.writableDatabase
+        db.delete(
+            DatabaseContract.ProductEntry.TABLE_NAME,
+            "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
+            arrayOf(gameId.toString())
+        )
+        db.close()
     }
 
-    private fun saveGames(games: List<Product>) {
-        val gamesJson = convertGamesToJson(games)
-        sharedPreferences.edit().putString(gamesKey, gamesJson).apply()
-    }
+    fun getGameById(gameId: Int): Product? {
+        val db = databaseHelper.readableDatabase
+        val cursor = db.query(
+            DatabaseContract.ProductEntry.TABLE_NAME,
+            null,
+            "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
+            arrayOf(gameId.toString()),
+            null, null, null
+        )
 
-    private fun convertGamesToJson(games: List<Product>): String {
-        val jsonArray = JSONArray()
-        games.forEach { product ->
-            val jsonObject = JSONObject().apply {
-                put("id", product.id)
-                put("title", product.title)
-                put("genre", product.genre)
-                put("price", product.price)
-                put("rating", product.rating.toDouble())
-                put("imageRes", product.imageRes) // AÑADIDO: Guardar imageRes
-                put("stock", product.stock) // AÑADIDO: Guardar stock
-
-            }
-            jsonArray.put(jsonObject)
+        val product = if (cursor.moveToFirst()) {
+            cursorToProduct(cursor)
+        } else {
+            null
         }
-        return jsonArray.toString()
+
+        cursor.close()
+        db.close()
+        return product
     }
 
-    private fun parseGamesFromJson(jsonString: String): List<Product> {
-        val games = mutableListOf<Product>()
-        try {
-            val jsonArray = JSONArray(jsonString)
-            for (i in 0 until jsonArray.length()) {
-                val jsonObject = jsonArray.getJSONObject(i)
-                val game = Product(
-                    id = jsonObject.getInt("id"),
-                    title = jsonObject.getString("title"),
-                    genre = jsonObject.getString("genre"),
-                    price = jsonObject.getString("price"),
-                    rating = jsonObject.getDouble("rating").toFloat(),
-                    imageRes = jsonObject.optInt("imageRes", R.drawable.procesador_amd_ryzen9),
-                    stock = jsonObject.optInt("stock", 0)
-                )
-                games.add(game)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            saveGames(defaultGames)
-            return defaultGames
+    fun updateStock(gameId: Int, newStock: Int) {
+        val db = databaseHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(DatabaseContract.ProductEntry.COLUMN_STOCK, newStock)
         }
-        return games
+
+        db.update(
+            DatabaseContract.ProductEntry.TABLE_NAME,
+            values,
+            "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
+            arrayOf(gameId.toString())
+        )
+        db.close()
+    }
+
+    private fun getNextProductId(db: SQLiteDatabase): Int {
+        val cursor = db.rawQuery(
+            "SELECT MAX(${DatabaseContract.ProductEntry.COLUMN_ID}) FROM ${DatabaseContract.ProductEntry.TABLE_NAME}",
+            null
+        )
+
+        val maxId = if (cursor.moveToFirst() && !cursor.isNull(0)) {
+            cursor.getInt(0)
+        } else {
+            0
+        }
+
+        cursor.close()
+        return maxId + 1
+    }
+
+    private fun cursorToProduct(cursor: Cursor): Product {
+        return Product(
+            id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_ID)),
+            title = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_TITLE)),
+            genre = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_GENRE)),
+            price = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_PRICE)),
+            rating = cursor.getFloat(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_RATING)),
+            description = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION)),
+            imageRes = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES)),
+            stock = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_STOCK))
+        )
     }
 }

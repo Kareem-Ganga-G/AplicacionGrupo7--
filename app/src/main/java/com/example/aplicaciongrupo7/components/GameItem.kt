@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.data.Product
 
+
 @Composable
 fun GameItem(
     game: Product,
