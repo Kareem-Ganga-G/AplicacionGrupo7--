@@ -13,35 +13,26 @@
         android:theme="@style/Theme.AplicacionGrupo7"
         tools:targetApi="31">
 
-        <!-- Actividad Principal -->
+        <!-- SOLO UNA ACTIVITY - MainActivity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:theme="@style/Theme.AplicacionGrupo7">
+            android:theme="@style/Theme.AplicacionGrupo7"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Actividad de Login -->
-        <activity
-            android:name=".LoginActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:windowSoftInputMode="adjustResize" />
-
-        <!-- Actividad de Registro -->
-        <activity
-            android:name=".RegisterActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:windowSoftInputMode="adjustResize" />
-
-        <!-- Actividad Principal después del login -->
-        <activity
-            android:name=".HomeActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+        <!-- ELIMINA TODAS ESTAS LÍNEAS -->
+        <!--
+        <activity android:name=".LoginScreen.kt" ... />  ← ERROR: No es una Activity
+        <activity android:name=".RegisterActivity" ... /> ← ELIMINAR
+        <activity android:name=".HomeActivity" ... /> ← ELIMINAR
+        -->
 
     </application>
 

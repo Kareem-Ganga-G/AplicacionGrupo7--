@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.components.SimpleGameItem
 import com.example.aplicaciongrupo7.data.CartManager
 import com.example.aplicaciongrupo7.data.GameManager
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,18 +31,35 @@ fun CatalogScreen(
     val context = LocalContext.current
     val gameManager = remember { GameManager(context) }
     val cartManager = remember { CartManager(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     val games by remember { mutableStateOf(gameManager.getGames()) }
     var searchText by remember { mutableStateOf(TextFieldValue("")) }
     var sortOption by remember { mutableStateOf("nombre") }
 
-    // Estado del carrito
-    var cartItems by remember { mutableStateOf(cartManager.getCartItems(games)) }
-    val cartItemsCount by remember { mutableStateOf(cartManager.getCartItemsCount()) }
+    // ESTA LÍNEA ES CRUCIAL - Pasar los productos al CartManager
+    LaunchedEffect(games) {
+        cartManager.setProducts(games)
+    }
+
+    // Estado del carrito - usando StateFlow
+    val cartItemsCount by cartManager.cartItemsCount.collectAsState()
+    val cartItems by cartManager.cartItems.collectAsState()
+
+    // Estado local para la cantidad en carrito por producto
+    val productQuantities = remember { mutableStateMapOf<Int, Int>() }
 
     // Detectar orientación
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+    // Inicializar cantidades de productos
+    LaunchedEffect(cartItems) {
+        productQuantities.clear()
+        cartItems.forEach { cartItem ->
+            productQuantities[cartItem.product.id] = cartItem.quantity
+        }
+    }
 
     val filteredGames = remember(games, searchText.text, sortOption) {
         var result = games
@@ -67,9 +85,16 @@ fun CatalogScreen(
         result
     }
 
-    // Función para actualizar el carrito
-    fun refreshCart() {
-        cartItems = cartManager.getCartItems(games)
+    // Función para agregar al carrito
+    fun addToCart(productId: Int) {
+        coroutineScope.launch {
+            try {
+                cartManager.addToCart(productId, 1)
+                // El StateFlow actualizará automáticamente cartItemsCount y cartItems
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     // Fondo negro completo
@@ -215,7 +240,7 @@ fun CatalogScreen(
                                 selected = sortOption == "nombre",
                                 onClick = { sortOption = "nombre" },
                                 label = {
-                                    Text("N", style = chipTextStyle, color = Color.White)
+                                    Text("Nombre", style = chipTextStyle, color = Color.White)
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = if (sortOption == "nombre") MaterialTheme.colorScheme.primary
@@ -223,13 +248,13 @@ fun CatalogScreen(
                                     labelColor = if (sortOption == "nombre") Color.White
                                     else Color.White.copy(alpha = 0.8f)
                                 ),
-                                modifier = Modifier.padding(horizontal = 0.dp)
+                                modifier = Modifier.padding(horizontal = 2.dp)
                             )
                             FilterChip(
                                 selected = sortOption == "precio",
                                 onClick = { sortOption = "precio" },
                                 label = {
-                                    Text("P", style = chipTextStyle, color = Color.White)
+                                    Text("Precio", style = chipTextStyle, color = Color.White)
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = if (sortOption == "precio") MaterialTheme.colorScheme.primary
@@ -237,13 +262,13 @@ fun CatalogScreen(
                                     labelColor = if (sortOption == "precio") Color.White
                                     else Color.White.copy(alpha = 0.8f)
                                 ),
-                                modifier = Modifier.padding(horizontal = 0.dp)
+                                modifier = Modifier.padding(horizontal = 2.dp)
                             )
                             FilterChip(
                                 selected = sortOption == "rating",
                                 onClick = { sortOption = "rating" },
                                 label = {
-                                    Text("R", style = chipTextStyle, color = Color.White)
+                                    Text("Rating", style = chipTextStyle, color = Color.White)
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = if (sortOption == "rating") MaterialTheme.colorScheme.primary
@@ -251,13 +276,13 @@ fun CatalogScreen(
                                     labelColor = if (sortOption == "rating") Color.White
                                     else Color.White.copy(alpha = 0.8f)
                                 ),
-                                modifier = Modifier.padding(horizontal = 0.dp)
+                                modifier = Modifier.padding(horizontal = 2.dp)
                             )
                             FilterChip(
                                 selected = sortOption == "genero",
                                 onClick = { sortOption = "genero" },
                                 label = {
-                                    Text("C", style = chipTextStyle, color = Color.White)
+                                    Text("Género", style = chipTextStyle, color = Color.White)
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = if (sortOption == "genero") MaterialTheme.colorScheme.primary
@@ -265,7 +290,7 @@ fun CatalogScreen(
                                     labelColor = if (sortOption == "genero") Color.White
                                     else Color.White.copy(alpha = 0.8f)
                                 ),
-                                modifier = Modifier.padding(horizontal = 0.dp)
+                                modifier = Modifier.padding(horizontal = 2.dp)
                             )
                         }
                     }
@@ -282,11 +307,11 @@ fun CatalogScreen(
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(
                         horizontal = if (isLandscape) 8.dp else 16.dp,
-                        vertical = if (isLandscape) 1.dp else 8.dp
+                        vertical = if (isLandscape) 4.dp else 8.dp
                     )
                 )
 
-                Spacer(modifier = Modifier.height(if (isLandscape) 1.dp else 8.dp))
+                Spacer(modifier = Modifier.height(if (isLandscape) 2.dp else 8.dp))
 
                 // Lista de productos
                 if (filteredGames.isEmpty()) {
@@ -307,7 +332,8 @@ fun CatalogScreen(
                                 },
                                 style = if (isLandscape) MaterialTheme.typography.bodyMedium
                                 else MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = Color.White.copy(alpha = 0.7f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
                     }
@@ -318,17 +344,16 @@ fun CatalogScreen(
                             .weight(1f)
                             .padding(horizontal = if (isLandscape) 4.dp else 16.dp)
                             .background(Color.Black),
-                        verticalArrangement = Arrangement.spacedBy(if (isLandscape) 2.dp else 8.dp)
+                        verticalArrangement = Arrangement.spacedBy(if (isLandscape) 4.dp else 8.dp)
                     ) {
                         items(filteredGames) { game ->
-                            val cartItem = cartItems.find { it.product.id == game.id }
+                            val cartQuantity = productQuantities[game.id] ?: 0
                             SimpleGameItem(
                                 item = game,
                                 onAddToCart = {
-                                    cartManager.addToCart(game.id, 1)
-                                    refreshCart()
+                                    addToCart(game.id)
                                 },
-                                cartQuantity = cartItem?.quantity ?: 0
+                                cartQuantity = cartQuantity
                             )
                         }
                     }

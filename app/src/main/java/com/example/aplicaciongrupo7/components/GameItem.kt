@@ -5,16 +5,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.data.Product
-
-
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Close
 @Composable
 fun GameItem(
     game: Product,
@@ -34,13 +35,13 @@ fun GameItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = game.imageRes),
-                contentDescription = "Imagen de ${game.title}",
+            // IMAGEN SEGURA - MODIFICADA
+            SafeGameImage(
+                imageRes = game.imageRes,
+                title = game.title,
                 modifier = Modifier
                     .size(80.dp)
-                    .padding(end = 16.dp),
-                contentScale = ContentScale.Fit
+                    .padding(end = 16.dp)
             )
 
             Column(modifier = Modifier.weight(1f)) {
@@ -158,13 +159,13 @@ fun SimpleGameItem(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = game.imageRes),
-                contentDescription = "Imagen de ${game.title}",
+            // IMAGEN SEGURA - MODIFICADA
+            SafeGameImage(
+                imageRes = game.imageRes,
+                title = game.title,
                 modifier = Modifier
                     .size(80.dp)
-                    .padding(end = 16.dp),
-                contentScale = ContentScale.Fit
+                    .padding(end = 16.dp)
             )
 
             Column(modifier = Modifier.weight(1f)) {
@@ -229,6 +230,46 @@ fun SimpleGameItem(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+// FUNCIÓN SEGURA PARA MANEJAR IMÁGENES - NUEVA
+@Composable
+fun SafeGameImage(
+    imageRes: Int,
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    var hasImageError by remember(imageRes) { mutableStateOf(false) }
+
+
+    @Composable
+    fun GameImagePlaceholder(
+        modifier: Modifier = Modifier,
+        title: String
+    ) {
+        Box(
+            modifier = modifier
+                .background(Color(0xFF2A2A2A)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Imagen no disponible: $title",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    "IMG",
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
     }

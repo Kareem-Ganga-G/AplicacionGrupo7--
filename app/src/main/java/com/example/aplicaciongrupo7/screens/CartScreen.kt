@@ -1,6 +1,7 @@
 package com.example.aplicaciongrupo7.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,12 +9,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -32,7 +35,7 @@ fun CartScreen(onBack: () -> Unit) {
 
     val allGames by remember { mutableStateOf(gameManager.getGames()) }
 
-    // StateFlow para los items del carrito - ACTUALIZADO
+    // StateFlow para los items del carrito
     val cartItems by cartManager.cartItems.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -40,7 +43,7 @@ fun CartScreen(onBack: () -> Unit) {
 
     // Actualizar el carrito cuando cambien los juegos
     LaunchedEffect(allGames) {
-        cartManager.updateCartItems(allGames)
+        cartManager.setProducts(allGames)
     }
 
     // Calcular el total del carrito
@@ -94,7 +97,6 @@ fun CartScreen(onBack: () -> Unit) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = {
-                                // Verificar stock antes de comprar
                                 val outOfStockItems = cartItems.filter {
                                     it.quantity > it.product.stock
                                 }
@@ -208,13 +210,12 @@ fun CartListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Imagen del producto
-            Image(
-                painter = painterResource(id = cartItem.product.imageRes),
-                contentDescription = cartItem.product.title,
+            SafeProductImage(
+                imageRes = cartItem.product.imageRes,
+                title = cartItem.product.title,
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
+                    .clip(RoundedCornerShape(8.dp))
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -252,7 +253,7 @@ fun CartListItem(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    // Controles de cantidad - CORREGIDO (icono Remove agregado)
+                    // Controles de cantidad
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -260,6 +261,10 @@ fun CartListItem(
                             onClick = { onQuantityChange(cartItem.quantity - 1) },
                             enabled = cartItem.quantity > 1
                         ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Disminuir cantidad"
+                            )
                         }
 
                         Text(
@@ -302,6 +307,44 @@ fun CartListItem(
                     Icons.Default.Delete,
                     contentDescription = "Eliminar del carrito",
                     tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+// SOLUCIÓN CORREGIDA - Maneja tipos de imagen no soportados
+@Composable
+fun SafeProductImage(
+    imageRes: Int,
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    var canLoadImage by remember(imageRes) { mutableStateOf(true) }
+    var hasImageError by remember(imageRes) { mutableStateOf(false) }
+
+
+    @Composable
+    fun ImagePlaceholder(modifier: Modifier = Modifier, title: String) {
+        Box(
+            modifier = modifier
+                .background(Color(0xFF2A2A2A)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Imagen no disponible: $title",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    "IMG",
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall
                 )
             }
         }

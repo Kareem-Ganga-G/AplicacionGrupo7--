@@ -76,14 +76,6 @@ fun SimpleGameItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // IMAGEN DEL PRODUCTO
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = title,
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
 
             Spacer(modifier = Modifier.width(16.dp))
 

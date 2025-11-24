@@ -20,6 +20,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import com.example.aplicaciongrupo7.R
 import com.example.aplicaciongrupo7.components.GameItem
 import com.example.aplicaciongrupo7.data.Product
@@ -131,11 +133,11 @@ fun AdminScreen(onBack: () -> Unit) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.logoinicio),
-                            contentDescription = "Sin productos",
-                            modifier = Modifier.size(120.dp),
-                            contentScale = ContentScale.Fit
+                        // IMAGEN SEGURA - MODIFICADA
+                        SafeGameImage(
+                            imageRes = R.drawable.logoinicio,
+                            title = "Logo de inicio",
+                            modifier = Modifier.size(120.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
@@ -214,13 +216,13 @@ fun GameEditDialog(
         R.drawable.procesador_amd_ryzen9,
         R.drawable.procesador_amd_ryzen7,
         R.drawable.procesador_intel_i9,
-        R.drawable.gpu_rtx4090,  // CORREGIDO: era qpu_rtx4090
-        R.drawable.gpu_rtx4070,  // CORREGIDO: era qpu_rtx4070
-        R.drawable.gpu_amd_radeon,  // CORREGIDO: era qpu_amd_radeon
+        R.drawable.gpu_rtx4090,
+        R.drawable.gpu_rtx4070,
+        R.drawable.gpu_amd_radeon,
         R.drawable.ram_corsair_dominator,
         R.drawable.ram_gskill_trident,
         R.drawable.monitor_samsung_odyssey,
-        R.drawable.monitor_asus_rog,  // CORREGIDO: era monitor_asus_reg
+        R.drawable.monitor_asus_rog,
         R.drawable.monitor_alienware
     )
 
@@ -274,16 +276,15 @@ fun GameEditDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Mostrar imagen seleccionada actualmente
+                // Mostrar imagen seleccionada actualmente - MODIFICADO
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 12.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = selectedImage),
-                        contentDescription = "Imagen seleccionada",
-                        modifier = Modifier.size(50.dp),
-                        contentScale = ContentScale.Fit
+                    SafeGameImage(
+                        imageRes = selectedImage,
+                        title = "Imagen seleccionada",
+                        modifier = Modifier.size(50.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
@@ -292,7 +293,7 @@ fun GameEditDialog(
                     )
                 }
 
-                // Grid de selección de imágenes
+                // Grid de selección de imágenes - MODIFICADO
                 LazyColumn(
                     modifier = Modifier.height(120.dp)
                 ) {
@@ -313,11 +314,10 @@ fun GameEditDialog(
                                         )
                                         .clickable { selectedImage = imageRes }
                                 ) {
-                                    Image(
-                                        painter = painterResource(id = imageRes),
-                                        contentDescription = imageNames[imageRes],
-                                        modifier = Modifier.size(60.dp),
-                                        contentScale = ContentScale.Fit
+                                    SafeGameImage(
+                                        imageRes = imageRes,
+                                        title = imageNames[imageRes] ?: "Imagen",
+                                        modifier = Modifier.size(60.dp)
                                     )
                                 }
                             }
@@ -445,4 +445,44 @@ fun GameEditDialog(
             }
         }
     )
+}
+
+// FUNCIÓN SEGURA PARA MANEJAR IMÁGENES - AÑADIDA
+@Composable
+fun SafeGameImage(
+    imageRes: Int,
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    var hasImageError by remember(imageRes) { mutableStateOf(false) }
+
+    // PLACEHOLDER PARA IMÁGENES - AÑADIDO
+    @Composable
+    fun GameImagePlaceholder(
+        modifier: Modifier = Modifier,
+        title: String
+    ) {
+        Box(
+            modifier = modifier
+                .background(Color(0xFF2A2A2A)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Imagen no disponible: $title",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(24.dp)
+                )
+                Text(
+                    "IMG",
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+    }
 }

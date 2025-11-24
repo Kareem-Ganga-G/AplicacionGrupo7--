@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.R
 import com.example.aplicaciongrupo7.data.UserManager
 import com.example.aplicaciongrupo7.data.isValidEmail
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -36,6 +37,7 @@ fun LoginScreen(
 
     val context = LocalContext.current
     val userManager = remember { UserManager(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     // Fondo negro completo
     Box(
@@ -200,36 +202,49 @@ fun LoginScreen(
 
             Button(
                 onClick = {
+                    // Validación básica
                     if (username.isEmpty() || password.isEmpty()) {
                         errorMessage = "Por favor completa todos los campos"
-                    } else if (useEmailLogin && !isValidEmail(username)) {
+                        return@Button
+                    }
+
+                    if (useEmailLogin && !isValidEmail(username)) {
                         errorMessage = "Por favor ingresa un email válido"
-                    } else {
-                        isLoading = true
+                        return@Button
+                    }
 
-                        val loginSuccess = if (useEmailLogin) {
-                            userManager.loginWithEmail(username, password)
-                        } else {
-                            userManager.validateLogin(username, password)
-                        }
+                    isLoading = true
+                    errorMessage = ""
 
-                        if (loginSuccess) {
-                            val user = userManager.currentUser
-                            if (user?.isAdmin == true) {
-                                // Redirigir a pantalla de admin
-                                onAdminLogin()
+                    // Mover la lógica de login a una corrutina
+                    coroutineScope.launch {
+                        try {
+                            val loginSuccess = if (useEmailLogin) {
+                                userManager.loginWithEmail(username, password)
                             } else {
-                                // Redirigir a pantalla normal
-                                onLoginSuccess()
+                                userManager.validateLogin(username, password)
                             }
-                        } else {
-                            errorMessage = if (useEmailLogin) {
-                                "Email o contraseña incorrectos"
+
+                            // IMPORTANTE: Usar withContext para actualizar el estado en el hilo principal
+                            if (loginSuccess) {
+                                val user = userManager.currentUser
+                                if (user?.isAdmin == true) {
+                                    onAdminLogin()
+                                } else {
+                                    onLoginSuccess()
+                                }
                             } else {
-                                "Usuario o contraseña incorrectos"
+                                errorMessage = if (useEmailLogin) {
+                                    "Email o contraseña incorrectos"
+                                } else {
+                                    "Usuario o contraseña incorrectos"
+                                }
                             }
+                        } catch (e: Exception) {
+                            errorMessage = "Error al iniciar sesión: ${e.message}"
+                        } finally {
+                            isLoading = false
                         }
-                        isLoading = false
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -242,7 +257,8 @@ fun LoginScreen(
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
-                        color = Color.White
+                        color = Color.White,
+                        strokeWidth = 2.dp
                     )
                 } else {
                     Text("Iniciar Sesión")
