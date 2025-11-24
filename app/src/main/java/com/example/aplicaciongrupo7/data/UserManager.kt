@@ -20,36 +20,54 @@ class UserManager(private val context: Context) {
     }
 
     private fun createAdminUserIfNeeded() {
-        val db = databaseHelper.readableDatabase
-        val cursor = db.query(
-            DatabaseContract.UserEntry.TABLE_NAME,
-            null,
-            "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ?",
-            arrayOf("p.lopez@duocuc.cl"),
-            null, null, null
-        )
-
-        val adminExists = cursor.count > 0
-        cursor.close()
-        db.close()
-
-        if (!adminExists) {
-            val adminUser = User(
-                username = "p.lopez",
-                password = "admin",
-                email = "p.lopez@duocuc.cl",
-                isAdmin = true
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.writableDatabase
+            cursor = db.query(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                null,
+                "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ?",
+                arrayOf("p.lopez@duocuc.cl"),
+                null, null, null
             )
-            saveUser(adminUser)
+
+            val adminExists = cursor.count > 0
+
+            if (!adminExists) {
+                val adminUser = User(
+                    username = "p.lopez",
+                    password = "admin",
+                    email = "p.lopez@duocuc.cl",
+                    isAdmin = true
+                )
+                // Llamar a saveUser sin cerrar la BD aquí
+                saveUserInternal(adminUser, db)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            cursor?.close()
+            db?.close()
         }
     }
 
     fun saveUser(user: User): Boolean {
-        val db = databaseHelper.writableDatabase
+        var db: SQLiteDatabase? = null
+        try {
+            db = databaseHelper.writableDatabase
+            return saveUserInternal(user, db)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } finally {
+            db?.close()
+        }
+    }
 
+    private fun saveUserInternal(user: User, db: SQLiteDatabase): Boolean {
         // Verificar si usuario ya existe
-        if (userExists(user.username) || emailExists(user.email)) {
-            db.close()
+        if (userExistsInternal(user.username, db) || emailExistsInternal(user.email, db)) {
             return false
         }
 
@@ -61,7 +79,6 @@ class UserManager(private val context: Context) {
         }
 
         val result = db.insert(DatabaseContract.UserEntry.TABLE_NAME, null, values)
-        db.close()
 
         if (result != -1L) {
             _currentUser = user
@@ -71,95 +88,136 @@ class UserManager(private val context: Context) {
     }
 
     fun deleteUser(username: String): Boolean {
-        val db = databaseHelper.writableDatabase
+        var db: SQLiteDatabase? = null
+        try {
+            // No permitir eliminar admin principal
+            if (username == "p.lopez") {
+                return false
+            }
 
-        // No permitir eliminar admin principal
-        if (username == "p.lopez") {
-            db.close()
+            db = databaseHelper.writableDatabase
+            val result = db.delete(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                "${DatabaseContract.UserEntry.COLUMN_USERNAME} = ?",
+                arrayOf(username)
+            )
+
+            if (result > 0 && _currentUser?.username == username) {
+                _currentUser = null
+            }
+            return result > 0
+        } catch (e: Exception) {
+            e.printStackTrace()
             return false
+        } finally {
+            db?.close()
         }
-
-        val result = db.delete(
-            DatabaseContract.UserEntry.TABLE_NAME,
-            "${DatabaseContract.UserEntry.COLUMN_USERNAME} = ?",
-            arrayOf(username)
-        )
-        db.close()
-
-        if (result > 0 && _currentUser?.username == username) {
-            _currentUser = null
-        }
-        return result > 0
     }
 
     fun getUsers(): List<User> {
-        val db = databaseHelper.readableDatabase
-        val users = mutableListOf<User>()
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.readableDatabase
+            val users = mutableListOf<User>()
 
-        val cursor = db.query(
-            DatabaseContract.UserEntry.TABLE_NAME,
-            null, null, null, null, null,
-            "${DatabaseContract.UserEntry.COLUMN_USERNAME} ASC"
-        )
+            cursor = db.query(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                null, null, null, null, null,
+                "${DatabaseContract.UserEntry.COLUMN_USERNAME} ASC"
+            )
 
-        while (cursor.moveToNext()) {
-            val user = cursorToUser(cursor)
-            users.add(user)
+            while (cursor.moveToNext()) {
+                val user = cursorToUser(cursor)
+                users.add(user)
+            }
+
+            return users
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return emptyList()
+        } finally {
+            cursor?.close()
+            db?.close()
         }
-
-        cursor.close()
-        db.close()
-        return users
     }
 
     fun validateLogin(username: String, password: String): Boolean {
-        val db = databaseHelper.readableDatabase
-        val cursor = db.query(
-            DatabaseContract.UserEntry.TABLE_NAME,
-            null,
-            "${DatabaseContract.UserEntry.COLUMN_USERNAME} = ? AND ${DatabaseContract.UserEntry.COLUMN_PASSWORD} = ?",
-            arrayOf(username, password),
-            null, null, null
-        )
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.readableDatabase
+            cursor = db.query(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                null,
+                "${DatabaseContract.UserEntry.COLUMN_USERNAME} = ? AND ${DatabaseContract.UserEntry.COLUMN_PASSWORD} = ?",
+                arrayOf(username, password),
+                null, null, null
+            )
 
-        val user = if (cursor.moveToFirst()) {
-            cursorToUser(cursor)
-        } else {
-            null
+            val user = if (cursor.moveToFirst()) {
+                cursorToUser(cursor)
+            } else {
+                null
+            }
+
+            _currentUser = user
+            return user != null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } finally {
+            cursor?.close()
+            db?.close()
         }
-
-        cursor.close()
-        db.close()
-
-        _currentUser = user
-        return user != null
     }
 
     fun loginWithEmail(email: String, password: String): Boolean {
-        val db = databaseHelper.readableDatabase
-        val cursor = db.query(
-            DatabaseContract.UserEntry.TABLE_NAME,
-            null,
-            "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ? AND ${DatabaseContract.UserEntry.COLUMN_PASSWORD} = ?",
-            arrayOf(email, password),
-            null, null, null
-        )
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.readableDatabase
+            cursor = db.query(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                null,
+                "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ? AND ${DatabaseContract.UserEntry.COLUMN_PASSWORD} = ?",
+                arrayOf(email, password),
+                null, null, null
+            )
 
-        val user = if (cursor.moveToFirst()) {
-            cursorToUser(cursor)
-        } else {
-            null
+            val user = if (cursor.moveToFirst()) {
+                cursorToUser(cursor)
+            } else {
+                null
+            }
+
+            _currentUser = user
+            return user != null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } finally {
+            cursor?.close()
+            db?.close()
         }
-
-        cursor.close()
-        db.close()
-
-        _currentUser = user
-        return user != null
     }
 
     fun userExists(username: String): Boolean {
-        val db = databaseHelper.readableDatabase
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.readableDatabase
+            return userExistsInternal(username, db)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } finally {
+            cursor?.close()
+            db?.close()
+        }
+    }
+
+    private fun userExistsInternal(username: String, db: SQLiteDatabase): Boolean {
         val cursor = db.query(
             DatabaseContract.UserEntry.TABLE_NAME,
             null,
@@ -170,12 +228,25 @@ class UserManager(private val context: Context) {
 
         val exists = cursor.count > 0
         cursor.close()
-        db.close()
         return exists
     }
 
     fun emailExists(email: String): Boolean {
-        val db = databaseHelper.readableDatabase
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.readableDatabase
+            return emailExistsInternal(email, db)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } finally {
+            cursor?.close()
+            db?.close()
+        }
+    }
+
+    private fun emailExistsInternal(email: String, db: SQLiteDatabase): Boolean {
         val cursor = db.query(
             DatabaseContract.UserEntry.TABLE_NAME,
             null,
@@ -186,7 +257,6 @@ class UserManager(private val context: Context) {
 
         val exists = cursor.count > 0
         cursor.close()
-        db.close()
         return exists
     }
 
@@ -199,21 +269,28 @@ class UserManager(private val context: Context) {
     }
 
     fun isUserRegistered(): Boolean {
-        val db = databaseHelper.readableDatabase
-        val cursor = db.rawQuery(
-            "SELECT COUNT(*) FROM ${DatabaseContract.UserEntry.TABLE_NAME}",
-            null
-        )
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.readableDatabase
+            cursor = db.rawQuery(
+                "SELECT COUNT(*) FROM ${DatabaseContract.UserEntry.TABLE_NAME}",
+                null
+            )
 
-        val count = if (cursor.moveToFirst()) {
-            cursor.getInt(0)
-        } else {
-            0
+            val count = if (cursor.moveToFirst()) {
+                cursor.getInt(0)
+            } else {
+                0
+            }
+            return count > 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } finally {
+            cursor?.close()
+            db?.close()
         }
-
-        cursor.close()
-        db.close()
-        return count > 0
     }
 
     fun logout() {
@@ -230,7 +307,6 @@ class UserManager(private val context: Context) {
     }
 }
 
-// Función de validación de email (se mantiene igual)
 fun isValidEmail(email: String): Boolean {
     val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\$".toRegex()
     return email.matches(emailRegex)
