@@ -14,135 +14,76 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.aplicaciongrupo7.data.Product
 
-// Interfaz común para productos y juegos
-interface ProductLike {
-    val id: Int
-    val title: String
-    val genre: String
-    val price: String
-    val rating: Float
-    val imageRes: Int
-    val stock: Int
-}
 
 @Composable
 fun SimpleGameItem(
-    item: Any, // Acepta cualquier objeto
-    onAddToCart: (() -> Unit)? = null,
+    item: Product,
+    onAddToCart: () -> Unit,
     cartQuantity: Int = 0
 ) {
-    // Convertir el item a propiedades usando when
-    val title = when (item) {
-        is com.example.aplicaciongrupo7.data.Product -> item.title
-        else -> item.toString()
-    }
-
-    val genre = when (item) {
-        is com.example.aplicaciongrupo7.data.Product -> item.genre
-        else -> ""
-    }
-
-    val price = when (item) {
-        is com.example.aplicaciongrupo7.data.Product -> item.price
-        else -> "$0.00"
-    }
-
-    val rating = when (item) {
-        is com.example.aplicaciongrupo7.data.Product -> item.rating
-        else -> 0f
-    }
-
-    val stock = when (item) {
-        is com.example.aplicaciongrupo7.data.Product -> item.stock
-        else -> 0
-    }
-
-    val imageRes = when (item) {
-        is com.example.aplicaciongrupo7.data.Product -> item.imageRes
-        else -> android.R.drawable.ic_menu_report_image // Imagen por defecto
-    }
-
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        // Imagen (usando el resource id guardado en DB)
+        Image(
+            painter = painterResource(id = item.imageRes),
+            contentDescription = item.title,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(80.dp)
+                .clip(RoundedCornerShape(8.dp)),
+            contentScale = ContentScale.Crop
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp)
         ) {
-            // IMAGEN DEL PRODUCTO
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = item.genre,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+            Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = genre,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Text(
+                text = item.price,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
 
+            if (cartQuantity > 0) {
                 Spacer(modifier = Modifier.height(4.dp))
-
-                // Rating y Stock
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "⭐ $rating",
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Stock: $stock",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (stock > 0) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.error
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
                 Text(
-                    text = price,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    text = "En carrito: $cartQuantity",
+                    style = MaterialTheme.typography.bodySmall
                 )
-
-                if (cartQuantity > 0) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "$cartQuantity en carrito",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
             }
+        }
 
-            if (onAddToCart != null && stock > 0) {
-                IconButton(
-                    onClick = onAddToCart,
-                    enabled = stock > 0
-                ) {
-                    Icon(
-                        Icons.Default.ShoppingCart,
-                        contentDescription = "Agregar al carrito",
-                        tint = if (stock > 0) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+        IconButton(
+            onClick = onAddToCart,
+            enabled = item.stock > 0
+        ) {
+            Icon(
+                Icons.Default.ShoppingCart,
+                contentDescription = "Agregar al carrito",
+                tint = if (item.stock > 0) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -11,6 +11,9 @@
       <SelectionState runConfigName="testRegisterAndDuplicatePrevention()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
+      <SelectionState runConfigName="testIsValidEmailFunction()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
     </selectionStates>
   </component>
 </project>

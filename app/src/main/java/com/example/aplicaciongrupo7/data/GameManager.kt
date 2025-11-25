@@ -6,6 +6,12 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import com.example.aplicaciongrupo7.R
 
+/**
+ * GameManager.kt
+ * Implementa operaciones básicas (CRUD) sobre la tabla products.
+ * Asegúrate de que DatabaseContract.ProductEntry.COLUMN_* coinciden con tu contract.
+ */
+
 class GameManager(private val context: Context) {
     private val databaseHelper = AppDatabaseHelper(context)
 
@@ -15,13 +21,16 @@ class GameManager(private val context: Context) {
 
         val cursor = db.query(
             DatabaseContract.ProductEntry.TABLE_NAME,
-            null, null, null, null, null,
+            null,
+            null,
+            null,
+            null,
+            null,
             "${DatabaseContract.ProductEntry.COLUMN_ID} ASC"
         )
 
         while (cursor.moveToNext()) {
-            val product = cursorToProduct(cursor)
-            products.add(product)
+            products.add(cursorToProduct(cursor))
         }
 
         cursor.close()
@@ -29,110 +38,49 @@ class GameManager(private val context: Context) {
         return products
     }
 
-    fun addGame(game: Product) {
+    fun addGame(product: Product) {
         val db = databaseHelper.writableDatabase
-
-        // Obtener el siguiente ID disponible
-        val nextId = getNextProductId(db)
-        val newGame = game.copy(id = nextId)
-
         val values = ContentValues().apply {
-            put(DatabaseContract.ProductEntry.COLUMN_ID, newGame.id)
-            put(DatabaseContract.ProductEntry.COLUMN_TITLE, newGame.title)
-            put(DatabaseContract.ProductEntry.COLUMN_GENRE, newGame.genre)
-            put(DatabaseContract.ProductEntry.COLUMN_PRICE, newGame.price)
-            put(DatabaseContract.ProductEntry.COLUMN_RATING, newGame.rating.toDouble())
-            put(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION, newGame.description)
-            put(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES, newGame.imageRes)
-            put(DatabaseContract.ProductEntry.COLUMN_STOCK, newGame.stock)
+            put(DatabaseContract.ProductEntry.COLUMN_TITLE, product.title)
+            put(DatabaseContract.ProductEntry.COLUMN_GENRE, product.genre)
+            put(DatabaseContract.ProductEntry.COLUMN_PRICE, product.price)
+            put(DatabaseContract.ProductEntry.COLUMN_RATING, product.rating.toDouble())
+            put(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION, product.description)
+            put(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES, product.imageRes)
+            put(DatabaseContract.ProductEntry.COLUMN_STOCK, product.stock)
         }
-
         db.insert(DatabaseContract.ProductEntry.TABLE_NAME, null, values)
         db.close()
     }
 
-    fun updateGame(updatedGame: Product) {
+    fun updateGame(product: Product) {
         val db = databaseHelper.writableDatabase
-
         val values = ContentValues().apply {
-            put(DatabaseContract.ProductEntry.COLUMN_TITLE, updatedGame.title)
-            put(DatabaseContract.ProductEntry.COLUMN_GENRE, updatedGame.genre)
-            put(DatabaseContract.ProductEntry.COLUMN_PRICE, updatedGame.price)
-            put(DatabaseContract.ProductEntry.COLUMN_RATING, updatedGame.rating.toDouble())
-            put(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION, updatedGame.description)
-            put(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES, updatedGame.imageRes)
-            put(DatabaseContract.ProductEntry.COLUMN_STOCK, updatedGame.stock)
+            put(DatabaseContract.ProductEntry.COLUMN_TITLE, product.title)
+            put(DatabaseContract.ProductEntry.COLUMN_GENRE, product.genre)
+            put(DatabaseContract.ProductEntry.COLUMN_PRICE, product.price)
+            put(DatabaseContract.ProductEntry.COLUMN_RATING, product.rating.toDouble())
+            put(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION, product.description)
+            put(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES, product.imageRes)
+            put(DatabaseContract.ProductEntry.COLUMN_STOCK, product.stock)
         }
-
         db.update(
             DatabaseContract.ProductEntry.TABLE_NAME,
             values,
             "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
-            arrayOf(updatedGame.id.toString())
+            arrayOf(product.id.toString())
         )
         db.close()
     }
 
-    fun deleteGame(gameId: Int) {
+    fun deleteGame(id: Int) {
         val db = databaseHelper.writableDatabase
         db.delete(
             DatabaseContract.ProductEntry.TABLE_NAME,
             "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
-            arrayOf(gameId.toString())
+            arrayOf(id.toString())
         )
         db.close()
-    }
-
-    fun getGameById(gameId: Int): Product? {
-        val db = databaseHelper.readableDatabase
-        val cursor = db.query(
-            DatabaseContract.ProductEntry.TABLE_NAME,
-            null,
-            "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
-            arrayOf(gameId.toString()),
-            null, null, null
-        )
-
-        val product = if (cursor.moveToFirst()) {
-            cursorToProduct(cursor)
-        } else {
-            null
-        }
-
-        cursor.close()
-        db.close()
-        return product
-    }
-
-    fun updateStock(gameId: Int, newStock: Int) {
-        val db = databaseHelper.writableDatabase
-        val values = ContentValues().apply {
-            put(DatabaseContract.ProductEntry.COLUMN_STOCK, newStock)
-        }
-
-        db.update(
-            DatabaseContract.ProductEntry.TABLE_NAME,
-            values,
-            "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
-            arrayOf(gameId.toString())
-        )
-        db.close()
-    }
-
-    private fun getNextProductId(db: SQLiteDatabase): Int {
-        val cursor = db.rawQuery(
-            "SELECT MAX(${DatabaseContract.ProductEntry.COLUMN_ID}) FROM ${DatabaseContract.ProductEntry.TABLE_NAME}",
-            null
-        )
-
-        val maxId = if (cursor.moveToFirst() && !cursor.isNull(0)) {
-            cursor.getInt(0)
-        } else {
-            0
-        }
-
-        cursor.close()
-        return maxId + 1
     }
 
     private fun cursorToProduct(cursor: Cursor): Product {

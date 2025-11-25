@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import android.util.Log
+
 
 class UserManager(private val context: Context) {
     private val databaseHelper = AppDatabaseHelper(context)
@@ -66,26 +68,46 @@ class UserManager(private val context: Context) {
     }
 
     private fun saveUserInternal(user: User, db: SQLiteDatabase): Boolean {
-        // Verificar si usuario ya existe
-        if (userExistsInternal(user.username, db) || emailExistsInternal(user.email, db)) {
-            return false
-        }
+        return try {
+            // 1. Verificar si usuario o email ya existen
+            if (userExistsInternal(user.username, db)) {
+                Log.e("DB", "Error: username ya existe -> ${user.username}")
+                return false
+            }
 
-        val values = ContentValues().apply {
-            put(DatabaseContract.UserEntry.COLUMN_USERNAME, user.username)
-            put(DatabaseContract.UserEntry.COLUMN_EMAIL, user.email)
-            put(DatabaseContract.UserEntry.COLUMN_PASSWORD, user.password)
-            put(DatabaseContract.UserEntry.COLUMN_IS_ADMIN, if (user.isAdmin) 1 else 0)
-        }
+            if (emailExistsInternal(user.email, db)) {
+                Log.e("DB", "Error: email ya existe -> ${user.email}")
+                return false
+            }
 
-        val result = db.insert(DatabaseContract.UserEntry.TABLE_NAME, null, values)
+            // 2. Insertar usuario
+            val values = ContentValues().apply {
+                put(DatabaseContract.UserEntry.COLUMN_USERNAME, user.username)
+                put(DatabaseContract.UserEntry.COLUMN_EMAIL, user.email)
+                put(DatabaseContract.UserEntry.COLUMN_PASSWORD, user.password)
+                put(DatabaseContract.UserEntry.COLUMN_IS_ADMIN, if (user.isAdmin) 1 else 0)
+            }
 
-        if (result != -1L) {
+            val result = db.insert(DatabaseContract.UserEntry.TABLE_NAME, null, values)
+
+            Log.e("DB", "Insert result = $result")
+
+            if (result == -1L) {
+                Log.e("DB", "ERROR: insert devolvió -1")
+                return false
+            }
+
             _currentUser = user
-            return true
+            true
+
+        } catch (e: Exception) {
+            Log.e("DB", "EXCEPCIÓN EN saveUserInternal", e)
+            false
         }
-        return false
     }
+
+
+
 
     fun deleteUser(username: String): Boolean {
         var db: SQLiteDatabase? = null

@@ -1,5 +1,9 @@
 package com.example.aplicaciongrupo7.screens
 
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,14 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.border
-import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import com.example.aplicaciongrupo7.R
 import com.example.aplicaciongrupo7.components.GameItem
-import com.example.aplicaciongrupo7.data.Product
+import com.example.aplicaciongrupo7.components.SafeGameImage
 import com.example.aplicaciongrupo7.data.GameManager
+import com.example.aplicaciongrupo7.data.Product
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,7 +132,6 @@ fun AdminScreen(onBack: () -> Unit) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // IMAGEN SEGURA - MODIFICADA
                         SafeGameImage(
                             imageRes = R.drawable.logoinicio,
                             title = "Logo de inicio",
@@ -194,6 +195,7 @@ fun AdminScreen(onBack: () -> Unit) {
     }
 }
 
+// Dialog para agregar/editar producto
 @Composable
 fun GameEditDialog(
     game: Product?,
@@ -208,13 +210,12 @@ fun GameEditDialog(
     var selectedImage by remember { mutableStateOf(game?.imageRes ?: R.drawable.procesador_amd_ryzen9) }
     var errorMessage by remember { mutableStateOf("") }
 
-    // Lista de imágenes disponibles - CORREGIDO con los nombres reales
     val availableImages = listOf(
         R.drawable.procesador_amd_ryzen9,
         R.drawable.procesador_amd_ryzen7,
         R.drawable.procesador_intel_i9,
         R.drawable.gpu_rtx4090,
-        R.drawable.`gpu_rtx4070`,
+        R.drawable.gpu_rtx4070,
         R.drawable.gpu_amd_radeon,
         R.drawable.ram_corsair_dominator,
         R.drawable.ram_gskill_trident,
@@ -223,13 +224,12 @@ fun GameEditDialog(
         R.drawable.monitor_alienware
     )
 
-    // Nombres de las imágenes para mostrar
     val imageNames = mapOf(
         R.drawable.procesador_amd_ryzen9 to "AMD Ryzen 9",
         R.drawable.procesador_amd_ryzen7 to "AMD Ryzen 7",
         R.drawable.procesador_intel_i9 to "Intel Core i9",
         R.drawable.gpu_rtx4090 to "RTX 4090",
-        R.drawable.`gpu_rtx4070` to "RTX 4070",
+        R.drawable.gpu_rtx4070 to "RTX 4070",
         R.drawable.gpu_amd_radeon to "AMD Radeon",
         R.drawable.ram_corsair_dominator to "RAM Corsair",
         R.drawable.ram_gskill_trident to "RAM G.Skill",
@@ -266,14 +266,12 @@ fun GameEditDialog(
                     )
                 }
 
-                // Selector de imagen
                 Text(
                     text = "Seleccionar Imagen:",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Mostrar imagen seleccionada actualmente - MODIFICADO
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -290,7 +288,6 @@ fun GameEditDialog(
                     )
                 }
 
-                // Grid de selección de imágenes - MODIFICADO
                 LazyColumn(
                     modifier = Modifier.height(120.dp)
                 ) {
@@ -442,44 +439,4 @@ fun GameEditDialog(
             }
         }
     )
-}
-
-// FUNCIÓN SEGURA PARA MANEJAR IMÁGENES - AÑADIDA
-@Composable
-fun SafeGameImage(
-    imageRes: Int,
-    title: String,
-    modifier: Modifier = Modifier
-) {
-    var hasImageError by remember(imageRes) { mutableStateOf(false) }
-
-    // PLACEHOLDER PARA IMÁGENES - AÑADIDO
-    @Composable
-    fun GameImagePlaceholder(
-        modifier: Modifier = Modifier,
-        title: String
-    ) {
-        Box(
-            modifier = modifier
-                .background(Color(0xFF2A2A2A)),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Imagen no disponible: $title",
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    "IMG",
-                    color = Color.White.copy(alpha = 0.7f),
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        }
-    }
 }

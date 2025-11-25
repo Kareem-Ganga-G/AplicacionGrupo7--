@@ -4,7 +4,7 @@ import android.provider.BaseColumns
 
 object DatabaseContract {
     const val DATABASE_NAME = "app_database.db"
-    const val DATABASE_VERSION = 2
+    const val DATABASE_VERSION = 3
 
     object ProductEntry {
         const val TABLE_NAME = "products"

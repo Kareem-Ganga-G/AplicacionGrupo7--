@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.aplicaciongrupo7.data.CartManager
-import com.example.aplicaciongrupo7.data.Product
 import org.junit.Assert.*
 import org.junit.After
 import org.junit.Before

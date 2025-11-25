@@ -1,5 +1,6 @@
 package com.example.aplicaciongrupo7.data
 
+
 data class User(
     val username: String,
     val password: String,
@@ -14,14 +15,15 @@ data class Product(
     val price: String,
     val rating: Float,
     val description: String = "",
-    val imageRes: Int,
-    val stock: Int = 0,
+    val imageRes: Int = 0,
+    val stock: Int = 0
 )
 
 data class CartItem(
     val product: Product,
     val quantity: Int = 1
 )
+
 data class Sale(
     val id: Long,
     val date: String,
