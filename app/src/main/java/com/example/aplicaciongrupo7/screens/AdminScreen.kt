@@ -1,6 +1,5 @@
 package com.example.aplicaciongrupo7.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,9 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
@@ -217,7 +214,7 @@ fun GameEditDialog(
         R.drawable.procesador_amd_ryzen7,
         R.drawable.procesador_intel_i9,
         R.drawable.gpu_rtx4090,
-        R.drawable.gpu_rtx4070,
+        R.drawable.`gpu_rtx4070`,
         R.drawable.gpu_amd_radeon,
         R.drawable.ram_corsair_dominator,
         R.drawable.ram_gskill_trident,
@@ -232,7 +229,7 @@ fun GameEditDialog(
         R.drawable.procesador_amd_ryzen7 to "AMD Ryzen 7",
         R.drawable.procesador_intel_i9 to "Intel Core i9",
         R.drawable.gpu_rtx4090 to "RTX 4090",
-        R.drawable.gpu_rtx4070 to "RTX 4070",
+        R.drawable.`gpu_rtx4070` to "RTX 4070",
         R.drawable.gpu_amd_radeon to "AMD Radeon",
         R.drawable.ram_corsair_dominator to "RAM Corsair",
         R.drawable.ram_gskill_trident to "RAM G.Skill",

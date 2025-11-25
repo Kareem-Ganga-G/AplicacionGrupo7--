@@ -17,13 +17,27 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // =============== CONFIGURACIÓN DE FIRMA PARA RELEASE ===============
+    signingConfigs {
+        create("release") {
+            storeFile = file("C:/Users/PC/Desktop/KeyStore/KeyStore.jks")
+            storePassword = "Grupo7"
+            keyAlias = "key0"
+            keyPassword = "Grupo7"
+        }
+    }
+
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        getByName("debug") {
+            isMinifyEnabled = false
         }
     }
 
@@ -37,14 +51,12 @@ android {
         jvmTarget = "1.8"
     }
 
-    // CONFIGURACIÓN CRÍTICA PARA TESTS
+    // CONFIGURACIÓN DE TESTS
     testOptions {
-        unitTests {
-            isIncludeAndroidResources = true
-            isReturnDefaultValues = true
-            all {
-                it.useJUnitPlatform()
-            }
+        unitTests.isIncludeAndroidResources = true
+        unitTests.isReturnDefaultValues = true
+        unitTests.all {
+            it.useJUnitPlatform()
         }
     }
 
@@ -55,6 +67,7 @@ android {
 }
 
 dependencies {
+
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.0")
@@ -69,16 +82,16 @@ dependencies {
     // Gson
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // Navigation para Compose
+    // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.3")
 
-    // ===== DEPENDENCIAS DE TESTING =====
+    // ==================== TESTING ====================
 
-    // PRUEBAS UNITARIAS (test) - JUnit 5
+    // JUnit 5
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-    testImplementation("org.junit.vintage:junit-vintage-engine:5.9.2") // Para compatibilidad con JUnit 4
+    testImplementation("org.junit.vintage:junit-vintage-engine:5.9.2")
 
     // Mockito
     testImplementation("org.mockito:mockito-core:5.4.0")
@@ -92,10 +105,10 @@ dependencies {
     testImplementation("androidx.test:rules:1.5.0")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
 
-    // Para pruebas con corrutinas
+    // Corrutinas Test
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.1")
 
-    // PRUEBAS INSTRUMENTADAS (androidTest)
+    // PRUEBAS INSTRUMENTADAS
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.test:runner:1.5.2")
@@ -104,14 +117,14 @@ dependencies {
     androidTestImplementation("androidx.test:core-ktx:1.5.0")
     androidTestImplementation("androidx.arch.core:core-testing:2.2.0")
 
-    // PRUEBAS DE COMPOSE
+    // Tests de Compose
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.5.4")
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.08.00"))
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.5.4")
     debugImplementation("androidx.compose.ui:ui-tooling:1.5.4")
 }
 
-// CONFIGURACIÓN GLOBAL PARA JUNIT 5
+// JUnit 5 Global
 tasks.withType<Test> {
     useJUnitPlatform()
 }
