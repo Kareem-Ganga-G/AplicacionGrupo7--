@@ -5,13 +5,7 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="CartManagerInstrumentedTest">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="testRegisterAndDuplicatePrevention()">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="testIsValidEmailFunction()">
+      <SelectionState runConfigName="testUsersTable_InsertAndRetrieve()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

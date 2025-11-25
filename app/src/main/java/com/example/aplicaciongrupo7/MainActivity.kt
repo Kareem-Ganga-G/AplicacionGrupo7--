@@ -9,7 +9,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.aplicaciongrupo7.data.UserManager
 import com.example.aplicaciongrupo7.screens.*
 import com.example.aplicaciongrupo7.ui.theme.AplicacionGrupo7Theme
@@ -152,10 +151,3 @@ fun ErrorScreen(message: String, onRetry: () -> Unit) {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    AplicacionGrupo7Theme {
-        SafeAppNavigation()
-    }
-}
