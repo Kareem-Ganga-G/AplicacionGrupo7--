@@ -1,30 +1,46 @@
 package com.example.aplicaciongrupo7.screens
 
-import androidx.compose.ui.platform.LocalContext
+import android.Manifest
+import android.net.Uri
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.Camera
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.core.content.FileProvider
+import coil.compose.rememberAsyncImagePainter
 import com.example.aplicaciongrupo7.R
 import com.example.aplicaciongrupo7.components.GameItem
 import com.example.aplicaciongrupo7.components.SafeGameImage
 import com.example.aplicaciongrupo7.data.GameManager
 import com.example.aplicaciongrupo7.data.Product
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -195,7 +211,7 @@ fun AdminScreen(onBack: () -> Unit) {
     }
 }
 
-// Dialog para agregar/editar producto
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameEditDialog(
     game: Product?,
@@ -210,33 +226,87 @@ fun GameEditDialog(
     var selectedImage by remember { mutableStateOf(game?.imageRes ?: R.drawable.procesador_amd_ryzen9) }
     var errorMessage by remember { mutableStateOf("") }
 
-    val availableImages = listOf(
-        R.drawable.procesador_amd_ryzen9,
-        R.drawable.procesador_amd_ryzen7,
-        R.drawable.procesador_intel_i9,
-        R.drawable.gpu_rtx4090,
-        R.drawable.gpu_rtx4070,
-        R.drawable.gpu_amd_radeon,
-        R.drawable.ram_corsair_dominator,
-        R.drawable.ram_gskill_trident,
-        R.drawable.monitor_samsung_odyssey,
-        R.drawable.monitor_asus_rog,
-        R.drawable.monitor_alienware
+    val context = LocalContext.current
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var tempImageFile by remember { mutableStateOf<File?>(null) }
+
+    // 1. Función para preparar archivo de cámara
+    fun prepareCameraFile(): File? {
+        return try {
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val storageDir = context.getExternalFilesDir("Pictures")
+            File.createTempFile(
+                "JPEG_${timeStamp}_",
+                ".jpg",
+                storageDir
+            ).apply {
+                tempImageFile = this
+            }
+        } catch (e: Exception) {
+            errorMessage = "Error al preparar archivo: ${e.message}"
+            null
+        }
+    }
+
+    // 2. Lanzador para la cámara
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { success ->
+            if (success) {
+                tempImageFile?.let { file ->
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file
+                    )
+                    imageUri = uri
+                }
+            } else {
+                errorMessage = "Error al tomar la foto"
+            }
+        }
     )
 
-    val imageNames = mapOf(
-        R.drawable.procesador_amd_ryzen9 to "AMD Ryzen 9",
-        R.drawable.procesador_amd_ryzen7 to "AMD Ryzen 7",
-        R.drawable.procesador_intel_i9 to "Intel Core i9",
-        R.drawable.gpu_rtx4090 to "RTX 4090",
-        R.drawable.gpu_rtx4070 to "RTX 4070",
-        R.drawable.gpu_amd_radeon to "AMD Radeon",
-        R.drawable.ram_corsair_dominator to "RAM Corsair",
-        R.drawable.ram_gskill_trident to "RAM G.Skill",
-        R.drawable.monitor_samsung_odyssey to "Samsung Odyssey",
-        R.drawable.monitor_asus_rog to "ASUS ROG",
-        R.drawable.monitor_alienware to "Alienware"
+    // 3. Lanzador para la galería
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri ->
+            uri?.let {
+                imageUri = it
+            } ?: run {
+                errorMessage = "No se seleccionó ninguna imagen"
+            }
+        }
     )
+
+    // 4. Permisos para la cámara
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            prepareCameraFile()?.let { file ->
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file
+                )
+                cameraLauncher.launch(uri)
+            }
+        } else {
+            errorMessage = "Se necesita permiso de cámara para tomar fotos"
+        }
+    }
+
+    // 5. Permisos para la galería
+    val galleryPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            galleryLauncher.launch("image/*")
+        } else {
+            errorMessage = "Se necesita permiso de almacenamiento para seleccionar imágenes"
+        }
+    }
 
     LaunchedEffect(game) {
         title = game?.title ?: ""
@@ -267,52 +337,161 @@ fun GameEditDialog(
                 }
 
                 Text(
-                    text = "Seleccionar Imagen:",
+                    text = "Imagen del Producto:",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                // Mostrar imagen seleccionada o imagen predeterminada
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    SafeGameImage(
-                        imageRes = selectedImage,
-                        title = "Imagen seleccionada",
-                        modifier = Modifier.size(50.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = imageNames[selectedImage] ?: "Imagen",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    if (imageUri != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(model = imageUri),
+                            contentDescription = "Imagen del producto",
+                            modifier = Modifier
+                                .size(120.dp)
+                                .border(2.dp, MaterialTheme.colorScheme.primary)
+                        )
+                    } else {
+                        SafeGameImage(
+                            imageRes = selectedImage,
+                            title = "Imagen seleccionada",
+                            modifier = Modifier.size(120.dp)
+                        )
+                    }
                 }
 
-                LazyColumn(
-                    modifier = Modifier.height(120.dp)
+                // Botones para cámara y galería
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    items(availableImages.chunked(3)) { rowImages ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            rowImages.forEach { imageRes ->
-                                Box(
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .border(
-                                            width = 2.dp,
-                                            color = if (selectedImage == imageRes) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.outline,
-                                            shape = MaterialTheme.shapes.small
+                    Button(
+                        onClick = {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Camera,
+                            contentDescription = "Tomar foto",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Cámara")
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Button(
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                galleryLauncher.launch("image/*")
+                            } else {
+                                galleryPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Photo,
+                            contentDescription = "Seleccionar de galería",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Galería")
+                    }
+                }
+
+                // Botón para usar imagen predeterminada
+                if (imageUri != null) {
+                    TextButton(
+                        onClick = {
+                            imageUri = null
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Cambiar")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Usar imagen predeterminada")
+                    }
+                }
+
+                // Selección de imágenes predeterminadas
+                if (imageUri == null) {
+                    Text(
+                        text = "Seleccionar Imagen Predeterminada:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
+                    val availableImages = listOf(
+                        R.drawable.procesador_amd_ryzen9,
+                        R.drawable.procesador_amd_ryzen7,
+                        R.drawable.procesador_intel_i9,
+                        R.drawable.gpu_rtx4090,
+                        R.drawable.gpu_rtx4070,
+                        R.drawable.gpu_amd_radeon,
+                        R.drawable.ram_corsair_dominator,
+                        R.drawable.ram_gskill_trident,
+                        R.drawable.monitor_samsung_odyssey,
+                        R.drawable.monitor_asus_rog,
+                        R.drawable.monitor_alienware
+                    )
+
+                    val imageNames = mapOf(
+                        R.drawable.procesador_amd_ryzen9 to "AMD Ryzen 9",
+                        R.drawable.procesador_amd_ryzen7 to "AMD Ryzen 7",
+                        R.drawable.procesador_intel_i9 to "Intel Core i9",
+                        R.drawable.gpu_rtx4090 to "RTX 4090",
+                        R.drawable.gpu_rtx4070 to "RTX 4070",
+                        R.drawable.gpu_amd_radeon to "AMD Radeon",
+                        R.drawable.ram_corsair_dominator to "RAM Corsair",
+                        R.drawable.ram_gskill_trident to "RAM G.Skill",
+                        R.drawable.monitor_samsung_odyssey to "Samsung Odyssey",
+                        R.drawable.monitor_asus_rog to "ASUS ROG",
+                        R.drawable.monitor_alienware to "Alienware"
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier.height(120.dp)
+                    ) {
+                        items(availableImages.chunked(3)) { rowImages ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                rowImages.forEach { imageRes ->
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(4.dp)
+                                            .border(
+                                                width = 2.dp,
+                                                color = if (selectedImage == imageRes) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.outline,
+                                                shape = MaterialTheme.shapes.small
+                                            )
+                                            .clickable { selectedImage = imageRes }
+                                    ) {
+                                        SafeGameImage(
+                                            imageRes = imageRes,
+                                            title = imageNames[imageRes] ?: "Imagen",
+                                            modifier = Modifier.size(60.dp)
                                         )
-                                        .clickable { selectedImage = imageRes }
-                                ) {
-                                    SafeGameImage(
-                                        imageRes = imageRes,
-                                        title = imageNames[imageRes] ?: "Imagen",
-                                        modifier = Modifier.size(60.dp)
-                                    )
+                                    }
                                 }
                             }
                         }
@@ -321,6 +500,7 @@ fun GameEditDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Campos del formulario
                 OutlinedTextField(
                     value = title,
                     onValueChange = {
@@ -369,9 +549,7 @@ fun GameEditDialog(
                     isError = errorMessage.isNotEmpty(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
                 OutlinedTextField(
                     value = stock,
                     onValueChange = {
@@ -384,13 +562,6 @@ fun GameEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                     isError = errorMessage.isNotEmpty(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "* Campos obligatorios",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },

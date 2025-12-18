@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permisos básicos -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <!-- Especifica que la cámara NO es requerida (la app puede funcionar sin ella) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -11,9 +20,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AplicacionGrupo7"
+        android:requestLegacyExternalStorage="true"
         tools:targetApi="31">
 
-        <!-- SOLO UNA ACTIVITY - MainActivity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -27,12 +36,15 @@
             </intent-filter>
         </activity>
 
-        <!-- ELIMINA TODAS ESTAS LÍNEAS -->
-        <!--
-        <activity android:name=".LoginScreen.kt" ... />  ← ERROR: No es una Activity
-        <activity android:name=".RegisterActivity" ... /> ← ELIMINAR
-        <activity android:name=".HomeActivity" ... /> ← ELIMINAR
-        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 
