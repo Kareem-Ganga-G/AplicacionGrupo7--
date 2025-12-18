@@ -9,17 +9,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.example.aplicaciongrupo7.data.CartManager
 import com.example.aplicaciongrupo7.data.UserManager
 import com.example.aplicaciongrupo7.screens.*
 import com.example.aplicaciongrupo7.ui.theme.AplicacionGrupo7Theme
 import kotlinx.coroutines.delay
-import androidx.compose.ui.unit.*
-import java.util.UUID
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
             AplicacionGrupo7Theme {
                 Surface(
@@ -40,29 +39,25 @@ fun SafeAppNavigation() {
     var userType by remember { mutableStateOf("user") }
     val context = LocalContext.current
 
+    val cartManager = remember {
+        CartManager(context.applicationContext)
+    }
+
     LaunchedEffect(Unit) {
         try {
-            // Inicializar UserManager
             val userManager = UserManager(context)
-
-            // Pequeña pausa para asegurar que la BD esté lista
             delay(100)
-
-            // Verificar si hay usuarios registrados
-            if (userManager.isUserRegistered()) {
-                currentScreen = "welcome" // Cambiado: ahora va a welcome screen
-            } else {
-                currentScreen = "register" // Si no hay usuarios, ir directo a registro
-            }
+            currentScreen =
+                if (userManager.isUserRegistered()) "welcome" else "register"
         } catch (e: Exception) {
-            errorMessage = "Error: ${e.message}"
+            errorMessage = e.message
             currentScreen = "error"
-            e.printStackTrace()
         }
     }
 
     when (currentScreen) {
         "loading" -> LoadingScreen()
+
         "error" -> ErrorScreen(
             message = errorMessage ?: "Error desconocido",
             onRetry = {
@@ -70,8 +65,13 @@ fun SafeAppNavigation() {
                 errorMessage = null
             }
         )
-        else -> AppNavigationContent(currentScreen, userType) { newScreen, type ->
-            currentScreen = newScreen
+
+        else -> AppNavigationContent(
+            currentScreen = currentScreen,
+            currentUserType = userType,
+            cartManager = cartManager
+        ) { screen, type ->
+            currentScreen = screen
             userType = type
         }
     }
@@ -81,56 +81,58 @@ fun SafeAppNavigation() {
 fun AppNavigationContent(
     currentScreen: String,
     currentUserType: String,
+    cartManager: CartManager,
     onScreenChange: (String, String) -> Unit
 ) {
     val context = LocalContext.current
     val userManager = remember { UserManager(context) }
 
     when (currentScreen) {
-        // NUEVA PANTALLA: Pantalla de bienvenida/selección
+
         "welcome" -> WelcomeScreen(
             onLoginClick = { onScreenChange("login", "user") },
             onRegisterClick = { onScreenChange("register", "user") },
             onAdminClick = { onScreenChange("admin_login", "admin") }
         )
 
-        // Pantalla de login para administradores (nueva)
         "admin_login" -> AdminLoginScreen(
             onLoginSuccess = { onScreenChange("admin", "admin") },
             onBack = { onScreenChange("welcome", "user") }
         )
 
         "login" -> LoginScreen(
-            onLoginSuccess = { userType ->
-                onScreenChange(if (userType == "admin") "admin" else "catalog", userType)
+            onLoginSuccess = { type ->
+                onScreenChange(if (type == "admin") "admin" else "catalog", type)
             },
             onRegisterClick = { onScreenChange("register", "user") },
             onAdminLogin = { onScreenChange("admin_login", "admin") },
             onForgotPassword = { onScreenChange("forgot_password", "user") },
-            onBack = { onScreenChange("welcome", "user") } // NUEVO: para volver
+            onBack = { onScreenChange("welcome", "user") }
         )
+
         "register" -> RegisterScreen(
-            onRegisterSuccess = {
-                // Después de registrarse, ir a login
-                onScreenChange("login", "user")
-            },
-            onBackToLogin = {
-                // Si ya tiene cuenta, ir a welcome
-                onScreenChange("welcome", "user")
-            },
-            onBack = { onScreenChange("welcome", "user") } // NUEVO: para volver
+            onRegisterSuccess = { onScreenChange("login", "user") },
+            onBackToLogin = { onScreenChange("welcome", "user") },
+            onBack = { onScreenChange("welcome", "user") }
         )
+
+        // ✅ CATÁLOGO (CORREGIDO: ahora recibe onGoToProfile)
         "catalog" -> CatalogScreen(
-            onLogout = {
+            cartManager = cartManager,
+            onBack = {
                 userManager.logout()
+                cartManager.clearCart()
                 onScreenChange("welcome", "user")
             },
             onGoToCart = { onScreenChange("cart", "user") },
-            onGoToProfile = { onScreenChange("profile", "user") }
+            onGoToProfile = { onScreenChange("profile", "user") } // <-- agregado
         )
+
         "cart" -> CartScreen(
+            cartManager = cartManager,
             onBack = { onScreenChange("catalog", "user") }
         )
+
         "admin" -> AdminScreen(
             onBack = {
                 userManager.logout()
@@ -138,15 +140,20 @@ fun AppNavigationContent(
             },
             onGoToProfile = { onScreenChange("admin_profile", "admin") }
         )
+
         "profile" -> ProfileScreen(
             userType = currentUserType,
             onBack = { onScreenChange("catalog", "user") },
             onLogout = {
                 userManager.logout()
+                cartManager.clearCart()
                 onScreenChange("welcome", "user")
             },
-            onChangePassword = { onScreenChange("change_password", currentUserType) }
+            onChangePassword = {
+                onScreenChange("change_password", currentUserType)
+            }
         )
+
         "admin_profile" -> ProfileScreen(
             userType = "admin",
             onBack = { onScreenChange("admin", "admin") },
@@ -154,42 +161,41 @@ fun AppNavigationContent(
                 userManager.logout()
                 onScreenChange("welcome", "user")
             },
-            onChangePassword = { onScreenChange("change_password", "admin") }
+            onChangePassword = {
+                onScreenChange("change_password", "admin")
+            }
         )
+
         "forgot_password" -> ForgotPasswordScreen(
             onBack = { onScreenChange("login", "user") },
             onSuccess = { onScreenChange("login", "user") }
         )
+
         "change_password" -> ChangePasswordScreen(
             onBack = {
-                if (currentUserType == "admin") {
-                    onScreenChange("admin_profile", "admin")
-                } else {
-                    onScreenChange("profile", "user")
-                }
+                onScreenChange(
+                    if (currentUserType == "admin") "admin_profile" else "profile",
+                    currentUserType
+                )
             },
             onSuccess = {
-                if (currentUserType == "admin") {
-                    onScreenChange("admin_profile", "admin")
-                } else {
-                    onScreenChange("profile", "user")
-                }
+                onScreenChange(
+                    if (currentUserType == "admin") "admin_profile" else "profile",
+                    currentUserType
+                )
             }
         )
     }
 }
 
+/* ───────── UI AUX ───────── */
+
 @Composable
 fun LoadingScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
             Text("Cargando aplicación...")
         }
     }
@@ -198,32 +204,18 @@ fun LoadingScreen() {
 @Composable
 fun ErrorScreen(message: String, onRetry: () -> Unit) {
     Column(
-        modifier = Modifier
+        Modifier
             .fillMaxSize()
             .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Error al iniciar la aplicación",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.error
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(24.dp))
+        Text("Error al iniciar", color = MaterialTheme.colorScheme.error)
+        Spacer(Modifier.height(16.dp))
+        Text(message)
+        Spacer(Modifier.height(24.dp))
         Button(onClick = onRetry) {
-            Text(text = "Reintentar")
+            Text("Reintentar")
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Si el error persiste, desinstala y reinstala la app",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

@@ -35,10 +35,10 @@ import com.example.aplicaciongrupo7.R
 import com.example.aplicaciongrupo7.components.GameItem
 import com.example.aplicaciongrupo7.components.SafeGameImage
 import com.example.aplicaciongrupo7.data.GameManager
-import com.example.aplicaciongrupo7.data.Product
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.aplicaciongrupo7.data.Product
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

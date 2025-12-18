@@ -3,18 +3,19 @@ package com.example.aplicaciongrupo7.data
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
-import android.database.sqlite.SQLiteDatabase
-import com.example.aplicaciongrupo7.R
 
 /**
  * GameManager.kt
- * Implementa operaciones básicas (CRUD) sobre la tabla products.
- * Asegúrate de que DatabaseContract.ProductEntry.COLUMN_* coinciden con tu contract.
+ * Maneja operaciones CRUD sobre la tabla products
  */
 
 class GameManager(private val context: Context) {
+
     private val databaseHelper = AppDatabaseHelper(context)
 
+    /**
+     * Obtener todos los productos
+     */
     fun getGames(): List<Product> {
         val db = databaseHelper.readableDatabase
         val products = mutableListOf<Product>()
@@ -38,6 +39,9 @@ class GameManager(private val context: Context) {
         return products
     }
 
+    /**
+     * Agregar producto
+     */
     fun addGame(product: Product) {
         val db = databaseHelper.writableDatabase
         val values = ContentValues().apply {
@@ -49,10 +53,14 @@ class GameManager(private val context: Context) {
             put(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES, product.imageRes)
             put(DatabaseContract.ProductEntry.COLUMN_STOCK, product.stock)
         }
+
         db.insert(DatabaseContract.ProductEntry.TABLE_NAME, null, values)
         db.close()
     }
 
+    /**
+     * Actualizar producto completo
+     */
     fun updateGame(product: Product) {
         val db = databaseHelper.writableDatabase
         val values = ContentValues().apply {
@@ -64,15 +72,20 @@ class GameManager(private val context: Context) {
             put(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES, product.imageRes)
             put(DatabaseContract.ProductEntry.COLUMN_STOCK, product.stock)
         }
+
         db.update(
             DatabaseContract.ProductEntry.TABLE_NAME,
             values,
             "${DatabaseContract.ProductEntry.COLUMN_ID} = ?",
             arrayOf(product.id.toString())
         )
+
         db.close()
     }
 
+    /**
+     * Eliminar producto
+     */
     fun deleteGame(id: Int) {
         val db = databaseHelper.writableDatabase
         db.delete(
@@ -83,16 +96,55 @@ class GameManager(private val context: Context) {
         db.close()
     }
 
+    /**
+     * 🔥 DESCONTAR STOCK AL COMPRAR
+     * Se usa desde CartScreen
+     */
+    fun decreaseStock(productId: Int, quantity: Int) {
+        val db = databaseHelper.writableDatabase
+
+        db.execSQL(
+            """
+            UPDATE ${DatabaseContract.ProductEntry.TABLE_NAME}
+            SET ${DatabaseContract.ProductEntry.COLUMN_STOCK} =
+                ${DatabaseContract.ProductEntry.COLUMN_STOCK} - ?
+            WHERE ${DatabaseContract.ProductEntry.COLUMN_ID} = ?
+            """.trimIndent(),
+            arrayOf(quantity, productId)
+        )
+
+        db.close()
+    }
+
+    /**
+     * Convertir cursor a Product
+     */
     private fun cursorToProduct(cursor: Cursor): Product {
         return Product(
-            id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_ID)),
-            title = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_TITLE)),
-            genre = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_GENRE)),
-            price = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_PRICE)),
-            rating = cursor.getFloat(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_RATING)),
-            description = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION)),
-            imageRes = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES)),
-            stock = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_STOCK))
+            id = cursor.getInt(
+                cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_ID)
+            ),
+            title = cursor.getString(
+                cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_TITLE)
+            ),
+            genre = cursor.getString(
+                cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_GENRE)
+            ),
+            price = cursor.getString(
+                cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_PRICE)
+            ),
+            rating = cursor.getFloat(
+                cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_RATING)
+            ),
+            description = cursor.getString(
+                cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_DESCRIPTION)
+            ),
+            imageRes = cursor.getInt(
+                cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_IMAGE_RES)
+            ),
+            stock = cursor.getInt(
+                cursor.getColumnIndexOrThrow(DatabaseContract.ProductEntry.COLUMN_STOCK)
+            )
         )
     }
 }

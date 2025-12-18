@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.data.Product
 
+
 /**
  * GameItem - composable que muestra un producto en el listado.
  * Firma compatible con AdminScreen (incluye onDelete).

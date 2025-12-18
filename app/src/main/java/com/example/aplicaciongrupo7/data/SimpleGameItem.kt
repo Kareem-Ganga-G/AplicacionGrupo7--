@@ -6,15 +6,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.data.Product
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
 
 
 @Composable
@@ -23,13 +28,20 @@ fun SimpleGameItem(
     onAddToCart: () -> Unit,
     cartQuantity: Int = 0
 ) {
+    // 🔹 ESTADO PARA ANIMACIÓN
+    var pressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 1.2f else 1f,
+        label = "cartScale"
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Imagen (usando el resource id guardado en DB)
         Image(
             painter = painterResource(id = item.imageRes),
             contentDescription = item.title,
@@ -53,11 +65,8 @@ fun SimpleGameItem(
 
             Text(
                 text = item.genre,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall
             )
-
-            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = item.price,
@@ -65,8 +74,17 @@ fun SimpleGameItem(
                 color = MaterialTheme.colorScheme.primary
             )
 
+            // ✅ STOCK (NO SE BORRÓ)
+            Text(
+                text = "Stock disponible: ${item.stock}",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (item.stock > 0)
+                    MaterialTheme.colorScheme.onSurface
+                else
+                    MaterialTheme.colorScheme.error
+            )
+
             if (cartQuantity > 0) {
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "En carrito: $cartQuantity",
                     style = MaterialTheme.typography.bodySmall
@@ -75,14 +93,18 @@ fun SimpleGameItem(
         }
 
         IconButton(
-            onClick = onAddToCart,
-            enabled = item.stock > 0
+            enabled = item.stock > cartQuantity,
+            onClick = {
+                pressed = true
+                onAddToCart()
+                // 🔁 volver a estado normal
+                pressed = false
+            }
         ) {
             Icon(
-                Icons.Default.ShoppingCart,
+                imageVector = Icons.Default.ShoppingCart,
                 contentDescription = "Agregar al carrito",
-                tint = if (item.stock > 0) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.scale(scale)
             )
         }
     }

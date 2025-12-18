@@ -1,103 +1,47 @@
 package com.example.aplicaciongrupo7.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle // NUEVO: Icono de perfil
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.aplicaciongrupo7.components.SimpleGameItem
-import com.example.aplicaciongrupo7.data.CartManager
-import com.example.aplicaciongrupo7.data.GameManager
+import com.example.aplicaciongrupo7.R
+import com.example.aplicaciongrupo7.data.UserManager
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CatalogScreen(
+fun ProfileScreen(
+    userType: String,
+    onBack: () -> Unit,
     onLogout: () -> Unit,
-    onGoToCart: () -> Unit,
-    onGoToProfile: () -> Unit // NUEVO: parámetro para perfil
+    onChangePassword: () -> Unit
 ) {
     val context = LocalContext.current
-    val gameManager = remember { GameManager(context) }
-    val cartManager = remember { CartManager(context) }
+    val userManager = remember { UserManager(context) }
+    val currentUser = userManager.currentUser
     val coroutineScope = rememberCoroutineScope()
-
-    val games by remember { mutableStateOf(gameManager.getGames()) }
-    var searchText by remember { mutableStateOf(TextFieldValue("")) }
-    var sortOption by remember { mutableStateOf("nombre") }
-
-    // ESTA LÍNEA ES CRUCIAL - Pasar los productos al CartManager
-    LaunchedEffect(games) {
-        cartManager.setProducts(games)
-    }
-
-    // Estado del carrito - usando StateFlow
-    val cartItemsCount by cartManager.cartItemsCount.collectAsState()
-    val cartItems by cartManager.cartItems.collectAsState()
-
-    // Estado local para la cantidad en carrito por producto
-    val productQuantities = remember { mutableStateMapOf<Int, Int>() }
-
-    // Detectar orientación
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    // Inicializar cantidades de productos
-    LaunchedEffect(cartItems) {
-        productQuantities.clear()
-        cartItems.forEach { cartItem ->
-            productQuantities[cartItem.product.id] = cartItem.quantity
-        }
-    }
-
-    val filteredGames = remember(games, searchText.text, sortOption) {
-        var result = games
-
-        // filtrado
-        if (searchText.text.isNotEmpty()) {
-            result = result.filter { game ->
-                game.title.contains(searchText.text, ignoreCase = true) ||
-                        game.genre.contains(searchText.text, ignoreCase = true)
-            }
-        }
-
-        // ordenado
-        result = when (sortOption) {
-            "precio" -> result.sortedBy {
-                it.price.replace("$", "").replace(",", "").toFloatOrNull() ?: 0f
-            }
-            "rating" -> result.sortedByDescending { it.rating }
-            "genero" -> result.sortedBy { it.genre }
-            else -> result.sortedBy { it.title } // "nombre"
-        }
-
-        result
-    }
-
-    // Función para agregar al carrito
-    fun addToCart(productId: Int) {
-        coroutineScope.launch {
-            try {
-                cartManager.addToCart(productId, 1)
-                // El StateFlow actualizará automáticamente cartItemsCount y cartItems
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showSuccessMessage by remember { mutableStateOf("") }
 
     // Fondo negro completo
     Box(
@@ -105,277 +49,318 @@ fun CatalogScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        Scaffold(
-            topBar = {
-                SmallTopAppBar(
-                    title = {
-                        Text(
-                            "Catálogo",
-                            style = if (isLandscape) MaterialTheme.typography.bodyMedium
-                            else MaterialTheme.typography.titleLarge,
-                            color = Color.White
-                        )
-                    },
-                    colors = TopAppBarDefaults.smallTopAppBarColors(
-                        containerColor = Color(0xFF1A1A1A),
-                        titleContentColor = Color.White,
-                        actionIconContentColor = Color.White
-                    ),
-                    actions = {
-                        // NUEVO: Icono de perfil
-                        IconButton(
-                            onClick = onGoToProfile,
-                            modifier = Modifier.size(if (isLandscape) 24.dp else 48.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.AccountCircle,
-                                contentDescription = "Perfil",
-                                modifier = Modifier.size(if (isLandscape) 16.dp else 24.dp),
-                                tint = Color.White
-                            )
-                        }
-
-                        // Icono de carrito con badge
-                        BadgedBox(
-                            badge = {
-                                if (cartItemsCount > 0) {
-                                    Badge(
-                                        modifier = Modifier.size(if (isLandscape) 16.dp else 20.dp),
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    ) {
-                                        Text(
-                                            cartItemsCount.toString(),
-                                            color = Color.White,
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    }
-                                }
-                            }
-                        ) {
-                            IconButton(
-                                onClick = onGoToCart,
-                                modifier = Modifier.size(if (isLandscape) 24.dp else 48.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.ShoppingCart,
-                                    contentDescription = "Carrito",
-                                    modifier = Modifier.size(if (isLandscape) 16.dp else 24.dp),
-                                    tint = Color.White
-                                )
-                            }
-                        }
-
-                        // Icono de logout
-                        IconButton(
-                            onClick = onLogout,
-                            modifier = Modifier.size(if (isLandscape) 24.dp else 48.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.ExitToApp,
-                                contentDescription = "Salir",
-                                modifier = Modifier.size(if (isLandscape) 16.dp else 24.dp),
-                                tint = Color.White
-                            )
-                        }
-                    }
-                )
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(Color.Black)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(if (isLandscape) 16.dp else 24.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header con botón volver
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Card de búsqueda con estilo oscuro
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(if (isLandscape) 4.dp else 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1A1A1A)
-                    ),
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = if (isLandscape) 1.dp else 4.dp
+                IconButton(
+                    onClick = onBack,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = Color.White
                     )
                 ) {
-                    Column(
-                        modifier = Modifier.padding(
-                            horizontal = if (isLandscape) 8.dp else 16.dp,
-                            vertical = if (isLandscape) 4.dp else 16.dp
-                        )
-                    ) {
-                        OutlinedTextField(
-                            value = searchText,
-                            onValueChange = { searchText = it },
-                            label = {
-                                Text(
-                                    "Buscar",
-                                    style = if (isLandscape) MaterialTheme.typography.labelSmall
-                                    else MaterialTheme.typography.bodyMedium,
-                                    color = Color.White
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = "Buscar",
-                                    modifier = Modifier.size(if (isLandscape) 14.dp else 24.dp),
-                                    tint = Color.White
-                                )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = if (isLandscape) 36.dp else 56.dp),
-                            singleLine = true,
-                            textStyle = if (isLandscape) MaterialTheme.typography.bodySmall
-                            else MaterialTheme.typography.bodyMedium,
-                            colors = TextFieldDefaults.colors(
-                                unfocusedTextColor = Color.White,
-                                focusedTextColor = Color.White,
-                                unfocusedContainerColor = Color(0x80212121),
-                                focusedContainerColor = Color(0x80212121),
-                                unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
-                                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                cursorColor = Color.White,
-                                unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f),
-                                focusedIndicatorColor = MaterialTheme.colorScheme.primary
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.height(if (isLandscape) 4.dp else 12.dp))
-
-                        // Filtros con estilo oscuro
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            val chipTextStyle = if (isLandscape) MaterialTheme.typography.labelSmall
-                            else MaterialTheme.typography.bodySmall
-
-                            FilterChip(
-                                selected = sortOption == "nombre",
-                                onClick = { sortOption = "nombre" },
-                                label = {
-                                    Text("Nombre", style = chipTextStyle, color = Color.White)
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = if (sortOption == "nombre") MaterialTheme.colorScheme.primary
-                                    else Color(0xFF2A2A2A),
-                                    labelColor = if (sortOption == "nombre") Color.White
-                                    else Color.White.copy(alpha = 0.8f)
-                                ),
-                                modifier = Modifier.padding(horizontal = 2.dp)
-                            )
-                            FilterChip(
-                                selected = sortOption == "precio",
-                                onClick = { sortOption = "precio" },
-                                label = {
-                                    Text("Precio", style = chipTextStyle, color = Color.White)
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = if (sortOption == "precio") MaterialTheme.colorScheme.primary
-                                    else Color(0xFF2A2A2A),
-                                    labelColor = if (sortOption == "precio") Color.White
-                                    else Color.White.copy(alpha = 0.8f)
-                                ),
-                                modifier = Modifier.padding(horizontal = 2.dp)
-                            )
-                            FilterChip(
-                                selected = sortOption == "rating",
-                                onClick = { sortOption = "rating" },
-                                label = {
-                                    Text("Rating", style = chipTextStyle, color = Color.White)
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = if (sortOption == "rating") MaterialTheme.colorScheme.primary
-                                    else Color(0xFF2A2A2A),
-                                    labelColor = if (sortOption == "rating") Color.White
-                                    else Color.White.copy(alpha = 0.8f)
-                                ),
-                                modifier = Modifier.padding(horizontal = 2.dp)
-                            )
-                            FilterChip(
-                                selected = sortOption == "genero",
-                                onClick = { sortOption = "genero" },
-                                label = {
-                                    Text("Género", style = chipTextStyle, color = Color.White)
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = if (sortOption == "genero") MaterialTheme.colorScheme.primary
-                                    else Color(0xFF2A2A2A),
-                                    labelColor = if (sortOption == "genero") Color.White
-                                    else Color.White.copy(alpha = 0.8f)
-                                ),
-                                modifier = Modifier.padding(horizontal = 2.dp)
-                            )
-                        }
-                    }
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                 }
 
-                // Contador de resultados
-                Text(
-                    text = if (searchText.text.isEmpty()) {
-                        "${filteredGames.size} productos"
-                    } else {
-                        "${filteredGames.size} resultados para \"${searchText.text}\""
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(
-                        horizontal = if (isLandscape) 8.dp else 16.dp,
-                        vertical = if (isLandscape) 4.dp else 8.dp
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (userType == "admin") {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    ) {
+                        Text(
+                            text = "ADMIN",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Avatar y nombre
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.logoinicio),
+                        contentDescription = "Avatar",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
                     )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = currentUser?.username ?: "Usuario",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.height(if (isLandscape) 2.dp else 8.dp))
+                Text(
+                    text = currentUser?.email ?: "No disponible",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
 
-                // Lista de productos
-                if (filteredGames.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = if (searchText.text.isEmpty()) {
-                                    "No hay productos en el catálogo"
-                                } else {
-                                    "No se encontraron productos"
-                                },
-                                style = if (isLandscape) MaterialTheme.typography.bodyMedium
-                                else MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.7f),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .weight(1f)
-                            .padding(horizontal = if (isLandscape) 4.dp else 16.dp)
-                            .background(Color.Black),
-                        verticalArrangement = Arrangement.spacedBy(if (isLandscape) 4.dp else 8.dp)
-                    ) {
-                        items(filteredGames) { game ->
-                            val cartQuantity = productQuantities[game.id] ?: 0
-                            SimpleGameItem(
-                                item = game,
-                                onAddToCart = {
-                                    addToCart(game.id)
-                                },
-                                cartQuantity = cartQuantity
-                            )
-                        }
-                    }
+                if (userType == "admin") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Administrador",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Información de perfil
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF1A1A1A)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Información del Perfil",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    // Item de usuario
+                    ProfileItem(
+                        icon = Icons.Default.Person,
+                        title = "Usuario",
+                        value = currentUser?.username ?: "No disponible"
+                    )
+
+                    // Item de email
+                    ProfileItem(
+                        icon = Icons.Default.Email,
+                        title = "Correo Electrónico",
+                        value = currentUser?.email ?: "No disponible"
+                    )
+
+                    // Item de tipo de cuenta
+                    ProfileItem(
+                        icon = Icons.Default.CheckCircle, // Cambiado de Security a VerifiedUser
+                        title = "Tipo de Cuenta",
+                        value = if (userType == "admin") "Administrador" else "Usuario Estándar"
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Opciones
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF1A1A1A)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 8.dp)
+                ) {
+                    // Cambiar contraseña
+                    ProfileOption(
+                        icon = Icons.Default.Lock,
+                        title = "Cambiar Contraseña",
+                        onClick = onChangePassword
+                    )
+
+                    Divider(
+                        color = Color.White.copy(alpha = 0.1f),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+
+                    // Cerrar sesión
+                    ProfileOption(
+                        icon = Icons.Default.ExitToApp, // Cambiado de Logout a ExitToApp
+                        title = "Cerrar Sesión",
+                        onClick = { showLogoutDialog = true },
+                        color = Color(0xFFEF5350) // Rojo para cerrar sesión
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Mensajes de éxito
+            if (showSuccessMessage.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF1B5E20)
+                    )
+                ) {
+                    Text(
+                        text = showSuccessMessage,
+                        color = Color.White,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+
+            // Información adicional
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF1A1A1A)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Acerca de Level-Up Gamer",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = "Tienda especializada en componentes y accesorios gaming",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
                 }
             }
         }
+    }
+
+    // Dialog para confirmar cierre de sesión
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = {
+                Text("¿Cerrar Sesión?")
+            },
+            text = {
+                Text("¿Estás seguro de que quieres cerrar la sesión?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                        coroutineScope.launch {
+                            // Pequeño delay para que se cierre el dialog
+                            kotlinx.coroutines.delay(300)
+                            onLogout()
+                        }
+                    }
+                ) {
+                    Text("Cerrar Sesión", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showLogoutDialog = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun ProfileItem(
+    icon: ImageVector,
+    title: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfileOption(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit,
+    color: Color = Color.White
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            modifier = Modifier.size(24.dp),
+            tint = color
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = color,
+            modifier = Modifier.weight(1f)
+        )
+
+        Icon(
+            imageVector = Icons.Default.KeyboardArrowRight, // Cambiado de ChevronRight a KeyboardArrowRight
+            contentDescription = "Ir",
+            modifier = Modifier.size(20.dp),
+            tint = color.copy(alpha = 0.7f)
+        )
     }
 }

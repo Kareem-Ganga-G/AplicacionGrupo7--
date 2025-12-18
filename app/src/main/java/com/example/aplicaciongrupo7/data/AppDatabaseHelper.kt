@@ -14,7 +14,8 @@ class AppDatabaseHelper(context: Context) : SQLiteOpenHelper(
 ) {
 
     override fun onCreate(db: SQLiteDatabase) {
-        // Tabla de usuarios SIMPLIFICADA (igual que tu versión original)
+
+        // ================= USUARIOS =================
         val createUsersTable = """
             CREATE TABLE ${DatabaseContract.UserEntry.TABLE_NAME} (
                 ${DatabaseContract.UserEntry.COLUMN_USERNAME} TEXT PRIMARY KEY,
@@ -23,10 +24,9 @@ class AppDatabaseHelper(context: Context) : SQLiteOpenHelper(
                 ${DatabaseContract.UserEntry.COLUMN_IS_ADMIN} INTEGER NOT NULL DEFAULT 0
             )
         """.trimIndent()
-
         db.execSQL(createUsersTable)
 
-        // Tabla de productos
+        // ================= PRODUCTOS =================
         val createProductsTable = """
             CREATE TABLE ${DatabaseContract.ProductEntry.TABLE_NAME} (
                 ${DatabaseContract.ProductEntry.COLUMN_ID} INTEGER PRIMARY KEY,
@@ -39,20 +39,28 @@ class AppDatabaseHelper(context: Context) : SQLiteOpenHelper(
                 ${DatabaseContract.ProductEntry.COLUMN_STOCK} INTEGER
             )
         """.trimIndent()
-
         db.execSQL(createProductsTable)
 
-        // Insertar productos por defecto
-        insertDefaultProducts(db)
+        // ================= CARRITO (LO ÚNICO NUEVO) =================
+        val createCartTable = """
+            CREATE TABLE ${DatabaseContract.CartEntry.TABLE_NAME} (
+                ${android.provider.BaseColumns._ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                ${DatabaseContract.CartEntry.COLUMN_PRODUCT_ID} INTEGER NOT NULL,
+                ${DatabaseContract.CartEntry.COLUMN_QUANTITY} INTEGER NOT NULL,
+                ${DatabaseContract.CartEntry.COLUMN_ADDED_DATE} INTEGER
+            )
+        """.trimIndent()
+        db.execSQL(createCartTable)
 
-        // Crear usuario administrador por defecto
+        // ================= DATOS INICIALES =================
+        insertDefaultProducts(db)
         createDefaultAdminUser(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Eliminar tablas existentes y recrearlas
         db.execSQL("DROP TABLE IF EXISTS ${DatabaseContract.UserEntry.TABLE_NAME}")
         db.execSQL("DROP TABLE IF EXISTS ${DatabaseContract.ProductEntry.TABLE_NAME}")
+        db.execSQL("DROP TABLE IF EXISTS ${DatabaseContract.CartEntry.TABLE_NAME}")
         onCreate(db)
     }
 
@@ -86,7 +94,6 @@ class AppDatabaseHelper(context: Context) : SQLiteOpenHelper(
         }
     }
 
-    // Método para crear usuario administrador por defecto
     private fun createDefaultAdminUser(db: SQLiteDatabase) {
         val adminUser = ContentValues().apply {
             put(DatabaseContract.UserEntry.COLUMN_USERNAME, "p.lopez")
@@ -94,7 +101,6 @@ class AppDatabaseHelper(context: Context) : SQLiteOpenHelper(
             put(DatabaseContract.UserEntry.COLUMN_PASSWORD, "admin123")
             put(DatabaseContract.UserEntry.COLUMN_IS_ADMIN, 1)
         }
-
         db.insert(DatabaseContract.UserEntry.TABLE_NAME, null, adminUser)
     }
 }
