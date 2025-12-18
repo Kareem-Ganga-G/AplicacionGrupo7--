@@ -9,7 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import android.util.Log
 
-
 class UserManager(private val context: Context) {
     private val databaseHelper = AppDatabaseHelper(context)
 
@@ -39,12 +38,14 @@ class UserManager(private val context: Context) {
             if (!adminExists) {
                 val adminUser = User(
                     username = "p.lopez",
-                    password = "admin",
+                    password = "admin123", // Contraseña más segura
                     email = "p.lopez@duocuc.cl",
                     isAdmin = true
                 )
-                // Llamar a saveUser sin cerrar la BD aquí
                 saveUserInternal(adminUser, db)
+                Log.d("UserManager", "Usuario admin creado: ${adminUser.email}")
+            } else {
+                Log.d("UserManager", "Usuario admin ya existe")
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -54,6 +55,140 @@ class UserManager(private val context: Context) {
         }
     }
 
+    // NUEVO: Verificar si usuario está logueado
+    fun isUserLoggedIn(): Boolean {
+        return _currentUser != null
+    }
+
+    // NUEVO: Obtener tipo de usuario
+    fun getUserType(): String {
+        return if (_currentUser?.isAdmin == true) "admin" else "user"
+    }
+
+    // NUEVO: Método para recuperar contraseña (versión simplificada)
+    fun recoverPassword(email: String): Boolean {
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.readableDatabase
+
+            // Verificar si el email existe
+            cursor = db.query(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                null,
+                "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ?",
+                arrayOf(email),
+                null, null, null
+            )
+
+            val exists = cursor.count > 0
+            if (exists) {
+                cursor.moveToFirst()
+                val username = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.UserEntry.COLUMN_USERNAME))
+                Log.d("UserManager", "Solicitud de recuperación para: $email (usuario: $username)")
+                // En una app real, aquí enviarías un email
+                return true
+            }
+
+            return false
+        } catch (e: Exception) {
+            Log.e("UserManager", "Error en recoverPassword", e)
+            return false
+        } finally {
+            cursor?.close()
+            db?.close()
+        }
+    }
+
+    // NUEVO: Método para cambiar contraseña (versión simplificada)
+    fun changePassword(email: String, oldPassword: String, newPassword: String): Boolean {
+        var db: SQLiteDatabase? = null
+        var cursor: Cursor? = null
+        try {
+            db = databaseHelper.writableDatabase
+
+            // Primero verificar que la contraseña actual sea correcta
+            cursor = db.query(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                null,
+                "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ? AND ${DatabaseContract.UserEntry.COLUMN_PASSWORD} = ?",
+                arrayOf(email, oldPassword),
+                null, null, null
+            )
+
+            if (cursor.count == 0) {
+                Log.d("UserManager", "Credenciales inválidas para: $email")
+                return false
+            }
+
+            // Actualizar la contraseña
+            val values = ContentValues().apply {
+                put(DatabaseContract.UserEntry.COLUMN_PASSWORD, newPassword)
+            }
+
+            val rowsAffected = db.update(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                values,
+                "${DatabaseContract.UserEntry.COLUMN_EMAIL} = ?",
+                arrayOf(email)
+            )
+
+            val success = rowsAffected > 0
+            if (success) {
+                Log.d("UserManager", "Contraseña actualizada para: $email")
+                // Actualizar usuario actual si es el mismo
+                if (_currentUser?.email == email) {
+                    _currentUser = _currentUser?.copy(password = newPassword)
+                }
+            }
+
+            return success
+        } catch (e: Exception) {
+            Log.e("UserManager", "Error en changePassword", e)
+            return false
+        } finally {
+            cursor?.close()
+            db?.close()
+        }
+    }
+
+    // NUEVO: Método para actualizar perfil (versión simplificada - solo email)
+    fun updateProfile(username: String, newEmail: String? = null): Boolean {
+        if (newEmail == null) {
+            return true // No hay cambios
+        }
+
+        var db: SQLiteDatabase? = null
+        try {
+            db = databaseHelper.writableDatabase
+
+            val values = ContentValues().apply {
+                put(DatabaseContract.UserEntry.COLUMN_EMAIL, newEmail)
+            }
+
+            val rowsAffected = db.update(
+                DatabaseContract.UserEntry.TABLE_NAME,
+                values,
+                "${DatabaseContract.UserEntry.COLUMN_USERNAME} = ?",
+                arrayOf(username)
+            )
+
+            val success = rowsAffected > 0
+            if (success && _currentUser?.username == username) {
+                // Actualizar usuario en memoria
+                _currentUser = _currentUser?.copy(email = newEmail)
+            }
+
+            return success
+        } catch (e: Exception) {
+            Log.e("UserManager", "Error en updateProfile", e)
+            return false
+        } finally {
+            db?.close()
+        }
+    }
+
+    // MÉTODOS EXISTENTES (sin cambios)
     fun saveUser(user: User): Boolean {
         var db: SQLiteDatabase? = null
         try {
@@ -90,7 +225,7 @@ class UserManager(private val context: Context) {
 
             val result = db.insert(DatabaseContract.UserEntry.TABLE_NAME, null, values)
 
-            Log.e("DB", "Insert result = $result")
+            Log.d("DB", "Insert result = $result")
 
             if (result == -1L) {
                 Log.e("DB", "ERROR: insert devolvió -1")
@@ -105,9 +240,6 @@ class UserManager(private val context: Context) {
             false
         }
     }
-
-
-
 
     fun deleteUser(username: String): Boolean {
         var db: SQLiteDatabase? = null

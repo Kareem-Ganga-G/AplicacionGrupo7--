@@ -14,9 +14,12 @@ import com.example.aplicaciongrupo7.screens.*
 import com.example.aplicaciongrupo7.ui.theme.AplicacionGrupo7Theme
 import kotlinx.coroutines.delay
 import androidx.compose.ui.unit.*
+import java.util.UUID
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             AplicacionGrupo7Theme {
                 Surface(
@@ -34,20 +37,22 @@ class MainActivity : ComponentActivity() {
 fun SafeAppNavigation() {
     var currentScreen by remember { mutableStateOf("loading") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var userType by remember { mutableStateOf("user") }
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         try {
-            // Test de la base de datos
+            // Inicializar UserManager
             val userManager = UserManager(context)
 
             // Pequeña pausa para asegurar que la BD esté lista
             delay(100)
 
-            if (!userManager.isUserRegistered()) {
-                currentScreen = "register"
+            // Verificar si hay usuarios registrados
+            if (userManager.isUserRegistered()) {
+                currentScreen = "welcome" // Cambiado: ahora va a welcome screen
             } else {
-                currentScreen = "login"
+                currentScreen = "register" // Si no hay usuarios, ir directo a registro
             }
         } catch (e: Exception) {
             errorMessage = "Error: ${e.message}"
@@ -65,8 +70,9 @@ fun SafeAppNavigation() {
                 errorMessage = null
             }
         )
-        else -> AppNavigationContent(currentScreen) { newScreen ->
+        else -> AppNavigationContent(currentScreen, userType) { newScreen, type ->
             currentScreen = newScreen
+            userType = type
         }
     }
 }
@@ -74,35 +80,100 @@ fun SafeAppNavigation() {
 @Composable
 fun AppNavigationContent(
     currentScreen: String,
-    onScreenChange: (String) -> Unit
+    currentUserType: String,
+    onScreenChange: (String, String) -> Unit
 ) {
     val context = LocalContext.current
     val userManager = remember { UserManager(context) }
 
     when (currentScreen) {
+        // NUEVA PANTALLA: Pantalla de bienvenida/selección
+        "welcome" -> WelcomeScreen(
+            onLoginClick = { onScreenChange("login", "user") },
+            onRegisterClick = { onScreenChange("register", "user") },
+            onAdminClick = { onScreenChange("admin_login", "admin") }
+        )
+
+        // Pantalla de login para administradores (nueva)
+        "admin_login" -> AdminLoginScreen(
+            onLoginSuccess = { onScreenChange("admin", "admin") },
+            onBack = { onScreenChange("welcome", "user") }
+        )
+
         "login" -> LoginScreen(
-            onLoginSuccess = { onScreenChange("catalog") },
-            onRegisterClick = { onScreenChange("register") },
-            onAdminLogin = { onScreenChange("admin") }
+            onLoginSuccess = { userType ->
+                onScreenChange(if (userType == "admin") "admin" else "catalog", userType)
+            },
+            onRegisterClick = { onScreenChange("register", "user") },
+            onAdminLogin = { onScreenChange("admin_login", "admin") },
+            onForgotPassword = { onScreenChange("forgot_password", "user") },
+            onBack = { onScreenChange("welcome", "user") } // NUEVO: para volver
         )
         "register" -> RegisterScreen(
-            onRegisterSuccess = { onScreenChange("login") },
-            onBackToLogin = { onScreenChange("login") }
+            onRegisterSuccess = {
+                // Después de registrarse, ir a login
+                onScreenChange("login", "user")
+            },
+            onBackToLogin = {
+                // Si ya tiene cuenta, ir a welcome
+                onScreenChange("welcome", "user")
+            },
+            onBack = { onScreenChange("welcome", "user") } // NUEVO: para volver
         )
         "catalog" -> CatalogScreen(
             onLogout = {
                 userManager.logout()
-                onScreenChange("login")
+                onScreenChange("welcome", "user")
             },
-            onGoToCart = { onScreenChange("cart") }
+            onGoToCart = { onScreenChange("cart", "user") },
+            onGoToProfile = { onScreenChange("profile", "user") }
         )
         "cart" -> CartScreen(
-            onBack = { onScreenChange("catalog") }
+            onBack = { onScreenChange("catalog", "user") }
         )
         "admin" -> AdminScreen(
             onBack = {
                 userManager.logout()
-                onScreenChange("login")
+                onScreenChange("welcome", "user")
+            },
+            onGoToProfile = { onScreenChange("admin_profile", "admin") }
+        )
+        "profile" -> ProfileScreen(
+            userType = currentUserType,
+            onBack = { onScreenChange("catalog", "user") },
+            onLogout = {
+                userManager.logout()
+                onScreenChange("welcome", "user")
+            },
+            onChangePassword = { onScreenChange("change_password", currentUserType) }
+        )
+        "admin_profile" -> ProfileScreen(
+            userType = "admin",
+            onBack = { onScreenChange("admin", "admin") },
+            onLogout = {
+                userManager.logout()
+                onScreenChange("welcome", "user")
+            },
+            onChangePassword = { onScreenChange("change_password", "admin") }
+        )
+        "forgot_password" -> ForgotPasswordScreen(
+            onBack = { onScreenChange("login", "user") },
+            onSuccess = { onScreenChange("login", "user") }
+        )
+        "change_password" -> ChangePasswordScreen(
+            onBack = {
+                if (currentUserType == "admin") {
+                    onScreenChange("admin_profile", "admin")
+                } else {
+                    onScreenChange("profile", "user")
+                }
+            },
+            onSuccess = {
+                if (currentUserType == "admin") {
+                    onScreenChange("admin_profile", "admin")
+                } else {
+                    onScreenChange("profile", "user")
+                }
             }
         )
     }
@@ -114,7 +185,13 @@ fun LoadingScreen() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text("Cargando...")
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Cargando aplicación...")
+        }
     }
 }
 
@@ -150,4 +227,3 @@ fun ErrorScreen(message: String, onRetry: () -> Unit) {
         )
     }
 }
-

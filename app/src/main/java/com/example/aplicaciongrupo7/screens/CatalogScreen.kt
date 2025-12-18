@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle // NUEVO: Icono de perfil
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -26,7 +27,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun CatalogScreen(
     onLogout: () -> Unit,
-    onGoToCart: () -> Unit
+    onGoToCart: () -> Unit,
+    onGoToProfile: () -> Unit // NUEVO: parámetro para perfil
 ) {
     val context = LocalContext.current
     val gameManager = remember { GameManager(context) }
@@ -120,6 +122,20 @@ fun CatalogScreen(
                         actionIconContentColor = Color.White
                     ),
                     actions = {
+                        // NUEVO: Icono de perfil
+                        IconButton(
+                            onClick = onGoToProfile,
+                            modifier = Modifier.size(if (isLandscape) 24.dp else 48.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.AccountCircle,
+                                contentDescription = "Perfil",
+                                modifier = Modifier.size(if (isLandscape) 16.dp else 24.dp),
+                                tint = Color.White
+                            )
+                        }
+
+                        // Icono de carrito con badge
                         BadgedBox(
                             badge = {
                                 if (cartItemsCount > 0) {
@@ -149,6 +165,7 @@ fun CatalogScreen(
                             }
                         }
 
+                        // Icono de logout
                         IconButton(
                             onClick = onLogout,
                             modifier = Modifier.size(if (isLandscape) 24.dp else 48.dp)

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,9 +26,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (userType: String) -> Unit,
     onRegisterClick: () -> Unit,
-    onAdminLogin: () -> Unit
+    onAdminLogin: () -> Unit,
+    onForgotPassword: () -> Unit,
+    onBack: () -> Unit // NUEVO: parámetro para volver
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -54,19 +57,36 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // NUEVO: Botón volver en la esquina superior izquierda
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                IconButton(
+                    onClick = onBack,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver al inicio")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Tu imagen como logo
             Image(
                 painter = painterResource(id = R.drawable.logoinicio),
                 contentDescription = "Logo Level-Up Gamer",
                 modifier = Modifier
-                    .size(150.dp)
+                    .size(120.dp)
                     .padding(bottom = 16.dp),
                 contentScale = ContentScale.Fit
             )
 
             // Mensaje de BIENVENIDO!
             Text(
-                text = "BIENVENIDO!",
+                text = "INICIAR SESIÓN",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
@@ -74,13 +94,13 @@ fun LoginScreen(
             )
 
             Text(
-                text = "Tienda Level-UP GAMER",
+                text = "Ingresa tus credenciales",
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Toggle entre usuario y email
             Card(
@@ -198,7 +218,7 @@ fun LoginScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
@@ -225,13 +245,12 @@ fun LoginScreen(
                                 userManager.validateLogin(username, password)
                             }
 
-                            // IMPORTANTE: Usar withContext para actualizar el estado en el hilo principal
                             if (loginSuccess) {
                                 val user = userManager.currentUser
                                 if (user?.isAdmin == true) {
-                                    onAdminLogin()
+                                    onLoginSuccess("admin")
                                 } else {
-                                    onLoginSuccess()
+                                    onLoginSuccess("user")
                                 }
                             } else {
                                 errorMessage = if (useEmailLogin) {
@@ -265,9 +284,21 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Botón para ir al registro
+            // Enlace para recuperar contraseña
+            TextButton(
+                onClick = onForgotPassword,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color.White
+                )
+            ) {
+                Text("¿Olvidaste tu contraseña?")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Enlace para registrarse
             TextButton(
                 onClick = onRegisterClick,
                 colors = ButtonDefaults.textButtonColors(
@@ -277,14 +308,53 @@ fun LoginScreen(
                 Text("¿No tienes cuenta? Regístrate aquí")
             }
 
-            // Solo mensaje de bienvenida - sin información de usuarios
             Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Ingresa tus credenciales para continuar",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
+
+            // Separador
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Divider(
+                    modifier = Modifier.weight(1f),
+                    color = Color.White.copy(alpha = 0.2f)
+                )
+                Text(
+                    text = "O",
+                    color = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Divider(
+                    modifier = Modifier.weight(1f),
+                    color = Color.White.copy(alpha = 0.2f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Botón para acceso administrador
+            OutlinedButton(
+                onClick = onAdminLogin,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Acceso Administrador")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Botón para volver al inicio
+            TextButton(
+                onClick = onBack,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = Color.White.copy(alpha = 0.7f)
+                )
+            ) {
+                Text("Volver al inicio")
+            }
         }
     }
 }

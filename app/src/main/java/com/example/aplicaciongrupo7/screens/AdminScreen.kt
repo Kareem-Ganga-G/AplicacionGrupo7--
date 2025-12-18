@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.Camera
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,9 +17,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Camera
-import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,11 +40,12 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminScreen(onBack: () -> Unit) {
+fun AdminScreen(
+    onBack: () -> Unit,
+    onGoToProfile: () -> Unit
+) {
     val context = LocalContext.current
     val gameManager = remember { GameManager(context) }
     var games by remember { mutableStateOf(gameManager.getGames()) }
@@ -61,6 +62,11 @@ fun AdminScreen(onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    // Icono de perfil - usando icono válido
+                    IconButton(onClick = onGoToProfile) {
+                        Icon(Icons.Default.Person, contentDescription = "Perfil")
+                    }
+
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Agregar juego")
                     }
@@ -383,7 +389,7 @@ fun GameEditDialog(
                         )
                     ) {
                         Icon(
-                            Icons.Default.Camera,
+                            Icons.Default.CameraAlt, // Cambiado a CameraAlt
                             contentDescription = "Tomar foto",
                             modifier = Modifier.size(20.dp)
                         )
@@ -407,7 +413,7 @@ fun GameEditDialog(
                         )
                     ) {
                         Icon(
-                            Icons.Default.Photo,
+                            Icons.Default.PhotoLibrary, // Cambiado a PhotoLibrary
                             contentDescription = "Seleccionar de galería",
                             modifier = Modifier.size(20.dp)
                         )
