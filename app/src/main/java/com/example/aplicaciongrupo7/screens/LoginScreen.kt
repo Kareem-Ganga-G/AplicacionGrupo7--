@@ -2,358 +2,373 @@ package com.example.aplicaciongrupo7.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.aplicaciongrupo7.R
 import com.example.aplicaciongrupo7.data.UserManager
 import com.example.aplicaciongrupo7.data.isValidEmail
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.BorderStroke // <--- ESTO FALTABA
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onLoginSuccess: (userType: String) -> Unit,
     onRegisterClick: () -> Unit,
     onAdminLogin: () -> Unit,
     onForgotPassword: () -> Unit,
-    onBack: () -> Unit // NUEVO: parámetro para volver
+    onBack: () -> Unit
 ) {
+    // --- ESTADOS DE LÓGICA (INTACTOS) ---
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var useEmailLogin by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) } // Extra: Para ver contraseña
 
     val context = LocalContext.current
     val userManager = remember { UserManager(context) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Fondo negro completo
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        // Contenido principal
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // NUEVO: Botón volver en la esquina superior izquierda
+    // --- COLORES DEL TEMA ---
+    val darkBg = Color(0xFF0F111A)
+    val inputBg = Color(0xFF1E293B)
+    val accentColor = Color(0xFF5E35B1) // Violeta Gamer
+    val errorColor = Color(0xFFEF5350)
+
+    // Estructura principal
+    Scaffold(
+        containerColor = darkBg,
+        topBar = {
+            // Botón volver discreto
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.Start
             ) {
                 IconButton(
                     onClick = onBack,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = Color.White
-                    )
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver al inicio")
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                 }
             }
+        }
+    ) { paddingValues ->
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Tu imagen como logo
-            Image(
-                painter = painterResource(id = R.drawable.logoinicio),
-                contentDescription = "Logo Level-Up Gamer",
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            Column(
                 modifier = Modifier
-                    .size(120.dp)
-                    .padding(bottom = 16.dp),
-                contentScale = ContentScale.Fit
-            )
-
-            // Mensaje de BIENVENIDO!
-            Text(
-                text = "INICIAR SESIÓN",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Text(
-                text = "Ingresa tus credenciales",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Toggle entre usuario y email
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1A1A1A)
-                )
+                    .fillMaxSize()
+                    .padding(horizontal = 32.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
+
+                // 1. LOGO CON EFECTO NEÓN
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                ) {
+                    // Círculo de brillo detrás
+                    Box(
+                        modifier = Modifier
+                            .size(110.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(accentColor.copy(alpha = 0.4f), Color.Transparent)
+                                )
+                            )
+                    )
+                    Image(
+                        painter = painterResource(id = R.drawable.logoinicio),
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(120.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
+                // 2. TEXTOS DE BIENVENIDA
+                Text(
+                    text = "BIENVENIDO",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    letterSpacing = 2.sp
+                )
+
+                Text(
+                    text = "Ingresa a tu cuenta gamer",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+                )
+
+                // 3. SELECTOR TIPO USUARIO (Estilizado)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Center,
+                        .padding(bottom = 24.dp)
+                        .background(inputBg, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Usuario",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (!useEmailLogin) MaterialTheme.colorScheme.primary
-                        else Color.White.copy(alpha = 0.7f)
+                        text = if (useEmailLogin) "Usar Email" else "Usar Usuario",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium
                     )
-
                     Switch(
                         checked = useEmailLogin,
                         onCheckedChange = { useEmailLogin = it },
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-
-                    Text(
-                        text = "Email",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (useEmailLogin) MaterialTheme.colorScheme.primary
-                        else Color.White.copy(alpha = 0.7f)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = accentColor,
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color.Black.copy(alpha = 0.3f)
+                        )
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                // 4. MENSAJE DE ERROR (Si existe)
+                if (errorMessage.isNotEmpty()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = errorColor.copy(alpha = 0.1f)),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, errorColor.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            color = errorColor,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(12.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
 
-            if (errorMessage.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFB00020)
+                // 5. CAMPOS DE TEXTO (Inputs modernos)
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = {
+                        username = it
+                        errorMessage = ""
+                    },
+                    label = { Text(if (useEmailLogin) "Email" else "Usuario") },
+                    placeholder = { Text(if (useEmailLogin) "ejemplo@correo.com" else "Tu alias gamer") },
+                    leadingIcon = {
+                        Icon(
+                            if (useEmailLogin) Icons.Default.Email else Icons.Default.Person,
+                            contentDescription = null
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = inputBg,
+                        unfocusedContainerColor = inputBg,
+                        focusedBorderColor = accentColor,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedLabelColor = accentColor,
+                        unfocusedLabelColor = Color.Gray,
+                        cursorColor = accentColor,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLeadingIconColor = accentColor,
+                        unfocusedLeadingIconColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        errorMessage = ""
+                    },
+                    label = { Text("Contraseña") },
+                    placeholder = { Text("••••••••") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Ver contraseña"
+                            )
+                        }
+                    },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = inputBg,
+                        unfocusedContainerColor = inputBg,
+                        focusedBorderColor = accentColor,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedLabelColor = accentColor,
+                        unfocusedLabelColor = Color.Gray,
+                        cursorColor = accentColor,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLeadingIconColor = accentColor,
+                        unfocusedLeadingIconColor = Color.Gray,
+                        focusedTrailingIconColor = accentColor,
+                        unfocusedTrailingIconColor = Color.Gray
+                    )
+                )
+
+                // Olvidé contraseña alineado a la derecha
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onForgotPassword) {
+                        Text(
+                            "¿Olvidaste tu contraseña?",
+                            color = accentColor.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 6. BOTÓN PRINCIPAL (Con sombra y gradiente visual)
+                Button(
+                    onClick = {
+                        // --- TU LÓGICA ORIGINAL ---
+                        if (username.isEmpty() || password.isEmpty()) {
+                            errorMessage = "Por favor completa todos los campos"
+                            return@Button
+                        }
+                        if (useEmailLogin && !isValidEmail(username)) {
+                            errorMessage = "Por favor ingresa un email válido"
+                            return@Button
+                        }
+
+                        isLoading = true
+                        errorMessage = ""
+
+                        coroutineScope.launch {
+                            try {
+                                val loginSuccess = if (useEmailLogin) {
+                                    userManager.loginWithEmail(username, password)
+                                } else {
+                                    userManager.validateLogin(username, password)
+                                }
+
+                                if (loginSuccess) {
+                                    val user = userManager.currentUser
+                                    if (user?.isAdmin == true) {
+                                        onLoginSuccess("admin")
+                                    } else {
+                                        onLoginSuccess("user")
+                                    }
+                                } else {
+                                    errorMessage = if (useEmailLogin) {
+                                        "Email o contraseña incorrectos"
+                                    } else {
+                                        "Usuario o contraseña incorrectos"
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                errorMessage = "Error: ${e.message}"
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                        // -------------------------
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .shadow(10.dp, RoundedCornerShape(12.dp), ambientColor = accentColor, spotColor = accentColor),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor,
+                        disabledContainerColor = Color.Gray
                     )
                 ) {
-                    Text(
-                        text = errorMessage,
-                        color = Color.White,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("INICIAR SESIÓN", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
-            }
 
-            // Campos de texto con estilo oscuro
-            OutlinedTextField(
-                value = username,
-                onValueChange = {
-                    username = it
-                    errorMessage = ""
-                },
-                label = {
-                    Text(
-                        if (useEmailLogin) "Email" else "Usuario",
-                        color = Color.White
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                isError = errorMessage.isNotEmpty(),
-                placeholder = {
-                    Text(
-                        if (useEmailLogin) "ejemplo@gmail.com" else "Nombre de usuario",
-                        color = Color.White.copy(alpha = 0.5f)
-                    )
-                },
-                colors = TextFieldDefaults.colors(
-                    unfocusedTextColor = Color.White,
-                    focusedTextColor = Color.White,
-                    unfocusedContainerColor = Color(0x801A1A1A),
-                    focusedContainerColor = Color(0x801A1A1A),
-                    unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    cursorColor = Color.White,
-                    unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f),
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary
-                )
-            )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    errorMessage = ""
-                },
-                label = {
-                    Text(
-                        "Contraseña",
-                        color = Color.White
-                    )
-                },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                isError = errorMessage.isNotEmpty(),
-                colors = TextFieldDefaults.colors(
-                    unfocusedTextColor = Color.White,
-                    focusedTextColor = Color.White,
-                    unfocusedContainerColor = Color(0x801A1A1A),
-                    focusedContainerColor = Color(0x801A1A1A),
-                    unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    cursorColor = Color.White,
-                    unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f),
-                    focusedIndicatorColor = MaterialTheme.colorScheme.primary
-                )
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    // Validación básica
-                    if (username.isEmpty() || password.isEmpty()) {
-                        errorMessage = "Por favor completa todos los campos"
-                        return@Button
+                // 7. REGISTRO
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text("¿No tienes cuenta?", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = onRegisterClick) {
+                        Text("Regístrate aquí", color = Color.White, fontWeight = FontWeight.Bold)
                     }
-
-                    if (useEmailLogin && !isValidEmail(username)) {
-                        errorMessage = "Por favor ingresa un email válido"
-                        return@Button
-                    }
-
-                    isLoading = true
-                    errorMessage = ""
-
-                    // Mover la lógica de login a una corrutina
-                    coroutineScope.launch {
-                        try {
-                            val loginSuccess = if (useEmailLogin) {
-                                userManager.loginWithEmail(username, password)
-                            } else {
-                                userManager.validateLogin(username, password)
-                            }
-
-                            if (loginSuccess) {
-                                val user = userManager.currentUser
-                                if (user?.isAdmin == true) {
-                                    onLoginSuccess("admin")
-                                } else {
-                                    onLoginSuccess("user")
-                                }
-                            } else {
-                                errorMessage = if (useEmailLogin) {
-                                    "Email o contraseña incorrectos"
-                                } else {
-                                    "Usuario o contraseña incorrectos"
-                                }
-                            }
-                        } catch (e: Exception) {
-                            errorMessage = "Error al iniciar sesión: ${e.message}"
-                        } finally {
-                            isLoading = false
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White
-                )
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("Iniciar Sesión")
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // Enlace para recuperar contraseña
-            TextButton(
-                onClick = onForgotPassword,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color.White
-                )
-            ) {
-                Text("¿Olvidaste tu contraseña?")
-            }
+                // Divisor sutil
+                Divider(color = Color.White.copy(alpha = 0.1f))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
+                // 8. ACCESO ADMIN
+                OutlinedButton(
+                    onClick = onAdminLogin,
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)
+                ) {
+                    Text("Acceso Administrador")
+                }
 
-            // Enlace para registrarse
-            TextButton(
-                onClick = onRegisterClick,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color.White
-                )
-            ) {
-                Text("¿No tienes cuenta? Regístrate aquí")
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Separador
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Divider(
-                    modifier = Modifier.weight(1f),
-                    color = Color.White.copy(alpha = 0.2f)
-                )
-                Text(
-                    text = "O",
-                    color = Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    style = MaterialTheme.typography.labelSmall
-                )
-                Divider(
-                    modifier = Modifier.weight(1f),
-                    color = Color.White.copy(alpha = 0.2f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Botón para acceso administrador
-            OutlinedButton(
-                onClick = onAdminLogin,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text("Acceso Administrador")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Botón para volver al inicio
-            TextButton(
-                onClick = onBack,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color.White.copy(alpha = 0.7f)
-                )
-            ) {
-                Text("Volver al inicio")
+                Spacer(modifier = Modifier.height(30.dp))
             }
         }
     }
