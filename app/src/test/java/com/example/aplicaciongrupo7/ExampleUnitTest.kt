@@ -1,5 +1,6 @@
 package com.example.aplicaciongrupo7
 
+import com.example.aplicaciongrupo7.data.Product
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -15,3 +16,4 @@ class ExampleUnitTest {
         assertEquals(4, 2 + 2)
     }
 }
+
