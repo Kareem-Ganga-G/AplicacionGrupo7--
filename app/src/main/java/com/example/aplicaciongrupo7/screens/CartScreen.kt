@@ -1,5 +1,6 @@
 package com.example.aplicaciongrupo7.screens
 
+import androidx.compose.foundation.Image // Importante: Agregar este import
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,13 +11,17 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown // Opcional para el botón menos
+import androidx.compose.material.icons.filled.Remove // Opcional para el botón menos
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale // Importante para que la imagen se vea bien
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource // Importante para cargar el ID
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.data.CartItem
@@ -31,6 +36,7 @@ fun CartScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    // Recuerda que lo ideal es inyectar esto, pero para este proyecto está bien aquí
     val gameManager = remember { GameManager(context) }
 
     val cartItems by cartManager.cartItems.collectAsState()
@@ -206,15 +212,18 @@ fun CartListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            Box(
+            // -------------------------------------------------------
+            // CAMBIO REALIZADO AQUÍ: Reemplacé el Box "IMG" por Image
+            // -------------------------------------------------------
+            Image(
+                painter = painterResource(id = cartItem.product.imageRes),
+                contentDescription = cartItem.product.title,
+                contentScale = ContentScale.Crop, // Para que llene el cuadro sin deformarse
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.DarkGray),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("IMG", color = Color.White)
-            }
+                    .background(Color.LightGray) // Fondo por si la imagen es transparente o falla
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -225,11 +234,13 @@ fun CartListItem(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Botón Menos
                     IconButton(
                         onClick = { onQuantityChange(cartItem.quantity - 1) },
                         enabled = cartItem.quantity > 1
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = null)
+                        // Cambié Close por Remove para que parezca un "-" (opcional, puedes revertirlo si gustas)
+                        Icon(Icons.Default.Remove, contentDescription = "Disminuir")
                     }
 
                     Text(
@@ -237,11 +248,12 @@ fun CartListItem(
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
 
+                    // Botón Más
                     IconButton(
                         onClick = { onQuantityChange(cartItem.quantity + 1) },
                         enabled = cartItem.quantity < cartItem.product.stock
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
+                        Icon(Icons.Default.Add, contentDescription = "Aumentar")
                     }
                 }
             }

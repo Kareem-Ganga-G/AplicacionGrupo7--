@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.aplicaciongrupo7.data.CartManager
+import com.example.aplicaciongrupo7.data.GameManager // <-- IMPORTANTE: Agregado
 import com.example.aplicaciongrupo7.data.UserManager
 import com.example.aplicaciongrupo7.screens.*
 import com.example.aplicaciongrupo7.ui.theme.AplicacionGrupo7Theme
@@ -39,6 +40,7 @@ fun SafeAppNavigation() {
     var userType by remember { mutableStateOf("user") }
     val context = LocalContext.current
 
+    // Instancia del CartManager (se mantiene viva mientras la app corre)
     val cartManager = remember {
         CartManager(context.applicationContext)
     }
@@ -46,6 +48,19 @@ fun SafeAppNavigation() {
     LaunchedEffect(Unit) {
         try {
             val userManager = UserManager(context)
+
+            // --- INICIO DEL CAMBIO ---
+            // 1. Instanciamos GameManager para obtener los productos
+            val gameManager = GameManager(context)
+
+            // 2. Obtenemos la lista de juegos (que incluye las imágenes/recursos)
+            val games = gameManager.getGames()
+
+            // 3. Pasamos los productos al CartManager.
+            // Esto hace que el carrito cargue las imágenes guardadas correctamente.
+            cartManager.setProducts(games)
+            // --- FIN DEL CAMBIO ---
+
             delay(100)
             currentScreen =
                 if (userManager.isUserRegistered()) "welcome" else "register"
@@ -116,7 +131,7 @@ fun AppNavigationContent(
             onBack = { onScreenChange("welcome", "user") }
         )
 
-        // ✅ CATÁLOGO (CORREGIDO: ahora recibe onGoToProfile)
+        // ✅ CATÁLOGO
         "catalog" -> CatalogScreen(
             cartManager = cartManager,
             onBack = {
@@ -125,7 +140,7 @@ fun AppNavigationContent(
                 onScreenChange("welcome", "user")
             },
             onGoToCart = { onScreenChange("cart", "user") },
-            onGoToProfile = { onScreenChange("profile", "user") } // <-- agregado
+            onGoToProfile = { onScreenChange("profile", "user") }
         )
 
         "cart" -> CartScreen(
