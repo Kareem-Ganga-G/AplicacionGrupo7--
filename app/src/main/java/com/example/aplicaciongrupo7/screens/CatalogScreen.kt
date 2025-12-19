@@ -1,366 +1,333 @@
 package com.example.aplicaciongrupo7.screens
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.aplicaciongrupo7.R
-import com.example.aplicaciongrupo7.data.UserManager
+import com.example.aplicaciongrupo7.data.CartManager
+import com.example.aplicaciongrupo7.data.GameManager
+import com.example.aplicaciongrupo7.data.Product
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+// --- COLORES PERSONALIZADOS PARA ESTA PANTALLA ---
+val BackgroundColor = Color(0xFFF4F6F9) // Gris azulado muy claro (Moderno)
+val CardColor = Color.White
+val PriceColor = Color(0xFF00897B)      // Verde Teal elegante
+val PrimaryButtonColor = Color(0xFF5E35B1) // Violeta Gamer (Deep Purple)
+val TopBarColor = Color(0xFF1A237E)     // Azul oscuro profundo
+val TextStockLow = Color(0xFFD32F2F)    // Rojo alerta
+val BadgeColor = Color(0xFF039BE5)      // Azul claro para badges
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(
-    userType: String,
+fun CatalogScreen(
+    cartManager: CartManager,
     onBack: () -> Unit,
-    onLogout: () -> Unit,
-    onChangePassword: () -> Unit
+    onGoToCart: () -> Unit,
+    onGoToProfile: () -> Unit
 ) {
     val context = LocalContext.current
-    val userManager = remember { UserManager(context) }
-    val currentUser = userManager.currentUser
-    val coroutineScope = rememberCoroutineScope()
+    val gameManager = remember { GameManager(context) }
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    var showLogoutDialog by remember { mutableStateOf(false) }
-    var showSuccessMessage by remember { mutableStateOf("") }
+    var products by remember { mutableStateOf<List<Product>>(emptyList()) }
+    val cartItems by cartManager.cartItems.collectAsState()
 
-    // Fondo negro completo
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(if (isLandscape) 16.dp else 24.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Header con botón volver
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onBack,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = Color.White
-                    )
-                ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-                Spacer(modifier = Modifier.weight(1f))
-
-                if (userType == "admin") {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                        )
-                    ) {
-                        Text(
-                            text = "ADMIN",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Avatar y nombre
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.logoinicio),
-                        contentDescription = "Avatar",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = currentUser?.username ?: "Usuario",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = currentUser?.email ?: "No disponible",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f)
-                )
-
-                if (userType == "admin") {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Administrador",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Información de perfil
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1A1A1A)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Información del Perfil",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    // Item de usuario
-                    ProfileItem(
-                        icon = Icons.Default.Person,
-                        title = "Usuario",
-                        value = currentUser?.username ?: "No disponible"
-                    )
-
-                    // Item de email
-                    ProfileItem(
-                        icon = Icons.Default.Email,
-                        title = "Correo Electrónico",
-                        value = currentUser?.email ?: "No disponible"
-                    )
-
-                    // Item de tipo de cuenta
-                    ProfileItem(
-                        icon = Icons.Default.CheckCircle, // Cambiado de Security a VerifiedUser
-                        title = "Tipo de Cuenta",
-                        value = if (userType == "admin") "Administrador" else "Usuario Estándar"
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Opciones
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1A1A1A)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(vertical = 8.dp)
-                ) {
-                    // Cambiar contraseña
-                    ProfileOption(
-                        icon = Icons.Default.Lock,
-                        title = "Cambiar Contraseña",
-                        onClick = onChangePassword
-                    )
-
-                    Divider(
-                        color = Color.White.copy(alpha = 0.1f),
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-
-                    // Cerrar sesión
-                    ProfileOption(
-                        icon = Icons.Default.ExitToApp, // Cambiado de Logout a ExitToApp
-                        title = "Cerrar Sesión",
-                        onClick = { showLogoutDialog = true },
-                        color = Color(0xFFEF5350) // Rojo para cerrar sesión
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Mensajes de éxito
-            if (showSuccessMessage.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1B5E20)
-                    )
-                ) {
-                    Text(
-                        text = showSuccessMessage,
-                        color = Color.White,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-
-            // Información adicional
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1A1A1A)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "Acerca de Level-Up Gamer",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = Color.White,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    Text(
-                        text = "Tienda especializada en componentes y accesorios gaming",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
+    LaunchedEffect(Unit) {
+        val loaded = gameManager.getGames()
+        products = loaded
+        cartManager.setProducts(loaded)
     }
 
-    // Dialog para confirmar cierre de sesión
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = {
-                Text("¿Cerrar Sesión?")
-            },
-            text = {
-                Text("¿Estás seguro de que quieres cerrar la sesión?")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showLogoutDialog = false
-                        coroutineScope.launch {
-                            // Pequeño delay para que se cierre el dialog
-                            kotlinx.coroutines.delay(300)
-                            onLogout()
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Catálogo Gamer", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            "${products.size} títulos disponibles",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = TopBarColor, // Barra oscura
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
+                ),
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onGoToCart) {
+                        BadgedBox(
+                            badge = {
+                                if (cartItems.isNotEmpty()) {
+                                    Badge(containerColor = Color.Red, contentColor = Color.White) {
+                                        Text(cartItems.sumOf { it.quantity }.toString())
+                                    }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito")
                         }
                     }
-                ) {
-                    Text("Cerrar Sesión", color = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = onGoToProfile) {
+                        Icon(Icons.Default.Person, contentDescription = "Perfil")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showLogoutDialog = false }
-                ) {
-                    Text("Cancelar")
+            )
+        },
+        content = { padding ->
+            // Fondo general de la pantalla
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BackgroundColor) // Color de fondo gris suave
+                    .padding(padding)
+                    .padding(horizontal = 8.dp)
+            ) {
+                if (products.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = PrimaryButtonColor)
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(if (isLandscape) 3 else 2),
+                        contentPadding = PaddingValues(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(products, key = { it.id }) { product ->
+
+                            val qtyInCart = cartItems.find { it.product.id == product.id }?.quantity ?: 0
+
+                            GameGridCard(
+                                product = product,
+                                cartQuantity = qtyInCart,
+                                onAddToCart = {
+                                    if (qtyInCart < product.stock) {
+                                        cartManager.addToCart(product.id)
+                                        scope.launch {
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                        }
+                                    } else {
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("¡Has alcanzado el límite de stock!")
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
             }
-        )
-    }
+        }
+    )
 }
 
 @Composable
-fun ProfileItem(
-    icon: ImageVector,
-    title: String,
-    value: String
+fun GameGridCard(
+    product: Product,
+    cartQuantity: Int,
+    onAddToCart: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
+    val isMaxedOut = cartQuantity >= product.stock
+    val isOutOfStock = product.stock <= 0
 
-        Spacer(modifier = Modifier.width(16.dp))
+    // Animación
+    var isAnimated by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isAnimated) 0.95f else 1f,
+        animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow),
+        label = "scale"
+    )
 
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f)
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
-            )
+    LaunchedEffect(isAnimated) {
+        if (isAnimated) {
+            delay(100)
+            isAnimated = false
         }
     }
-}
 
-@Composable
-fun ProfileOption(
-    icon: ImageVector,
-    title: String,
-    onClick: () -> Unit,
-    color: Color = Color.White
-) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .height(290.dp) // Un poco más alta para mejor espacio
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .shadow(6.dp, RoundedCornerShape(12.dp)) // Sombra más elegante
+            .clickable(enabled = !isMaxedOut && !isOutOfStock) {
+                isAnimated = true
+                onAddToCart()
+            },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CardColor), // Tarjeta blanca limpia
+        elevation = CardDefaults.cardElevation(0.dp) // Quitamos elevación default para usar shadow custom
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            modifier = Modifier.size(24.dp),
-            tint = color
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
 
-        Spacer(modifier = Modifier.width(16.dp))
+            // 1. Imagen (50%)
+            Box(
+                modifier = Modifier
+                    .weight(0.50f)
+                    .fillMaxWidth()
+            ) {
+                Image(
+                    painter = painterResource(id = product.imageRes),
+                    contentDescription = product.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
 
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = color,
-            modifier = Modifier.weight(1f)
-        )
+                // Badge de AGOTADO
+                if (isOutOfStock) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.7f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("AGOTADO", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
 
-        Icon(
-            imageVector = Icons.Default.KeyboardArrowRight, // Cambiado de ChevronRight a KeyboardArrowRight
-            contentDescription = "Ir",
-            modifier = Modifier.size(20.dp),
-            tint = color.copy(alpha = 0.7f)
-        )
+            // 2. Información (50%)
+            Column(
+                modifier = Modifier
+                    .weight(0.50f)
+                    .padding(12.dp), // Más padding interno
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    // Título
+                    Text(
+                        text = product.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black, // Texto negro nítido
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    // Género
+                    Text(
+                        text = product.genre,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Gray
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Stock y Estado del carrito
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Stock
+                        Text(
+                            text = "Stock: ${product.stock}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (product.stock < 5) TextStockLow else Color.Gray
+                        )
+
+                        // "Llevas X" (Badge visual)
+                        if (cartQuantity > 0) {
+                            Surface(
+                                color = if (isMaxedOut) TextStockLow.copy(alpha=0.1f) else BadgeColor.copy(alpha=0.1f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = if (isMaxedOut) "MAX" else "x$cartQuantity",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isMaxedOut) TextStockLow else BadgeColor,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFEEEEEE))
+
+                // Precio y Botón
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = product.price,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = PriceColor // Usamos el color verde teal definido arriba
+                    )
+
+                    // Botón personalizado
+                    FilledIconButton(
+                        onClick = {
+                            isAnimated = true
+                            onAddToCart()
+                        },
+                        modifier = Modifier.size(36.dp), // Un poco más grande
+                        enabled = !isMaxedOut && !isOutOfStock,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = PrimaryButtonColor, // Violeta
+                            disabledContainerColor = Color.LightGray
+                        ),
+                        shape = RoundedCornerShape(8.dp) // Botón un poco más cuadrado
+                    ) {
+                        Icon(
+                            imageVector = if (isMaxedOut) Icons.Default.Block else Icons.Default.AddShoppingCart,
+                            contentDescription = "Agregar",
+                            modifier = Modifier.size(18.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+        }
     }
 }
