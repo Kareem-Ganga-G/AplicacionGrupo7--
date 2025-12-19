@@ -25,7 +25,7 @@ fun CatalogScreen(
     cartManager: CartManager,
     onBack: () -> Unit,
     onGoToCart: () -> Unit,
-    onGoToProfile: () -> Unit // agregado para navegar a perfil
+    onGoToProfile: () -> Unit
 ) {
     val context = LocalContext.current
     val gameManager = remember { GameManager(context) }
