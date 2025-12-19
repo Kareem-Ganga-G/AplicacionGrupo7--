@@ -39,6 +39,10 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import com.example.aplicaciongrupo7.data.Product
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -224,37 +228,39 @@ fun GameEditDialog(
     onSave: (Product) -> Unit,
     onDismiss: () -> Unit
 ) {
+    // --- ESTADOS DEL FORMULARIO ---
     var title by remember { mutableStateOf(game?.title ?: "") }
     var genre by remember { mutableStateOf(game?.genre ?: "") }
     var price by remember { mutableStateOf(game?.price ?: "") }
     var rating by remember { mutableStateOf(game?.rating?.toString() ?: "4.0") }
     var stock by remember { mutableStateOf(game?.stock?.toString() ?: "0") }
-    var selectedImage by remember { mutableStateOf(game?.imageRes ?: R.drawable.procesador_amd_ryzen9) }
+
+    // Imagen seleccionada (puede ser un ID de recursos o un URI de archivo)
+    var selectedImageRes by remember { mutableStateOf(game?.imageRes ?: R.drawable.procesador_amd_ryzen9) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
     var errorMessage by remember { mutableStateOf("") }
 
+    // --- HERRAMIENTAS DE CÁMARA Y ARCHIVOS ---
     val context = LocalContext.current
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
     var tempImageFile by remember { mutableStateOf<File?>(null) }
+    val scrollState = rememberScrollState() // Estado para el scroll vertical
 
-    // 1. Función para preparar archivo de cámara
+    // 1. Función para crear el archivo temporal de la foto
     fun prepareCameraFile(): File? {
         return try {
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
             val storageDir = context.getExternalFilesDir("Pictures")
-            File.createTempFile(
-                "JPEG_${timeStamp}_",
-                ".jpg",
-                storageDir
-            ).apply {
+            File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir).apply {
                 tempImageFile = this
             }
         } catch (e: Exception) {
-            errorMessage = "Error al preparar archivo: ${e.message}"
+            errorMessage = "Error creando archivo: ${e.message}"
             null
         }
     }
 
-    // 2. Lanzador para la cámara
+    // 2. Launcher de CÁMARA
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
@@ -265,27 +271,21 @@ fun GameEditDialog(
                         "${context.packageName}.fileprovider",
                         file
                     )
-                    imageUri = uri
+                    selectedImageUri = uri
                 }
-            } else {
-                errorMessage = "Error al tomar la foto"
             }
         }
     )
 
-    // 3. Lanzador para la galería
+    // 3. Launcher de GALERÍA
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
-            uri?.let {
-                imageUri = it
-            } ?: run {
-                errorMessage = "No se seleccionó ninguna imagen"
-            }
+            if (uri != null) selectedImageUri = uri
         }
     )
 
-    // 4. Permisos para la cámara
+    // 4. Permisos
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -299,105 +299,81 @@ fun GameEditDialog(
                 cameraLauncher.launch(uri)
             }
         } else {
-            errorMessage = "Se necesita permiso de cámara para tomar fotos"
+            errorMessage = "Se requiere permiso de cámara"
         }
     }
 
-    // 5. Permisos para la galería
     val galleryPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            galleryLauncher.launch("image/*")
-        } else {
-            errorMessage = "Se necesita permiso de almacenamiento para seleccionar imágenes"
-        }
+        if (isGranted) galleryLauncher.launch("image/*")
+        else errorMessage = "Se requiere permiso de almacenamiento"
     }
 
-    LaunchedEffect(game) {
-        title = game?.title ?: ""
-        genre = game?.genre ?: ""
-        price = game?.price ?: ""
-        rating = game?.rating?.toString() ?: "4.0"
-        stock = game?.stock?.toString() ?: "0"
-        selectedImage = game?.imageRes ?: R.drawable.procesador_amd_ryzen9
-        errorMessage = ""
-    }
-
+    // --- UI DEL DIÁLOGO ---
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                if (game == null) "Agregar Nuevo Producto"
-                else "Editar: ${game.title}"
-            )
+            Text(if (game == null) "Nuevo Producto" else "Editar Producto")
         },
         text = {
-            Column {
+            // ✨ SCROLL VERTICAL HABILITADO ✨
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState) // <-- ESTO ARREGLA EL SCROLL
+            ) {
                 if (errorMessage.isNotEmpty()) {
                     Text(
                         text = errorMessage,
                         color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                 }
 
-                Text(
-                    text = "Imagen del Producto:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                // Mostrar imagen seleccionada o imagen predeterminada
+                // --- PREVISUALIZACIÓN DE IMAGEN ---
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp),
+                        .height(140.dp)
+                        .padding(vertical = 8.dp)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (imageUri != null) {
+                    if (selectedImageUri != null) {
                         Image(
-                            painter = rememberAsyncImagePainter(model = imageUri),
-                            contentDescription = "Imagen del producto",
+                            painter = rememberAsyncImagePainter(model = selectedImageUri),
+                            contentDescription = "Imagen seleccionada",
                             modifier = Modifier
-                                .size(120.dp)
-                                .border(2.dp, MaterialTheme.colorScheme.primary)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(8.dp))
                         )
                     } else {
                         SafeGameImage(
-                            imageRes = selectedImage,
-                            title = "Imagen seleccionada",
-                            modifier = Modifier.size(120.dp)
+                            imageRes = selectedImageRes,
+                            title = "Imagen predeterminada",
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(8.dp))
                         )
                     }
                 }
 
-                // Botones para cámara y galería
+                // --- BOTONES DE CÁMARA Y GALERÍA ---
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        },
+                        onClick = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
-                        Icon(
-                            Icons.Default.CameraAlt, // Cambiado a CameraAlt
-                            contentDescription = "Tomar foto",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cámara")
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Cámara", style = MaterialTheme.typography.bodySmall)
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp))
 
                     Button(
                         onClick = {
@@ -408,95 +384,62 @@ fun GameEditDialog(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
-                        Icon(
-                            Icons.Default.PhotoLibrary, // Cambiado a PhotoLibrary
-                            contentDescription = "Seleccionar de galería",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Galería")
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Galería", style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
-                // Botón para usar imagen predeterminada
-                if (imageUri != null) {
+                // Botón para volver a imagen por defecto si se usó una foto
+                if (selectedImageUri != null) {
                     TextButton(
-                        onClick = {
-                            imageUri = null
-                        },
+                        onClick = { selectedImageUri = null },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Cambiar")
-                        Spacer(modifier = Modifier.width(4.dp))
                         Text("Usar imagen predeterminada")
                     }
                 }
 
-                // Selección de imágenes predeterminadas
-                if (imageUri == null) {
+                // --- SELECCIÓN DE IMÁGENES PREDETERMINADAS ---
+                // Solo se muestra si no hay foto de cámara seleccionada
+                if (selectedImageUri == null) {
                     Text(
-                        text = "Seleccionar Imagen Predeterminada:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        "O selecciona una imagen:",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                     )
 
-                    val availableImages = listOf(
-                        R.drawable.procesador_amd_ryzen9,
-                        R.drawable.procesador_amd_ryzen7,
-                        R.drawable.procesador_intel_i9,
-                        R.drawable.gpu_rtx4090,
-                        R.drawable.gpu_rtx4070,
-                        R.drawable.gpu_amd_radeon,
-                        R.drawable.ram_corsair_dominator,
-                        R.drawable.ram_gskill_trident,
-                        R.drawable.monitor_samsung_odyssey,
-                        R.drawable.monitor_asus_rog,
+                    val defaultImages = listOf(
+                        R.drawable.procesador_amd_ryzen9, R.drawable.procesador_amd_ryzen7,
+                        R.drawable.procesador_intel_i9, R.drawable.gpu_rtx4090,
+                        R.drawable.gpu_rtx4070, R.drawable.gpu_amd_radeon,
+                        R.drawable.ram_corsair_dominator, R.drawable.ram_gskill_trident,
+                        R.drawable.monitor_samsung_odyssey, R.drawable.monitor_asus_rog,
                         R.drawable.monitor_alienware
                     )
 
-                    val imageNames = mapOf(
-                        R.drawable.procesador_amd_ryzen9 to "AMD Ryzen 9",
-                        R.drawable.procesador_amd_ryzen7 to "AMD Ryzen 7",
-                        R.drawable.procesador_intel_i9 to "Intel Core i9",
-                        R.drawable.gpu_rtx4090 to "RTX 4090",
-                        R.drawable.gpu_rtx4070 to "RTX 4070",
-                        R.drawable.gpu_amd_radeon to "AMD Radeon",
-                        R.drawable.ram_corsair_dominator to "RAM Corsair",
-                        R.drawable.ram_gskill_trident to "RAM G.Skill",
-                        R.drawable.monitor_samsung_odyssey to "Samsung Odyssey",
-                        R.drawable.monitor_asus_rog to "ASUS ROG",
-                        R.drawable.monitor_alienware to "Alienware"
-                    )
-
-                    LazyColumn(
-                        modifier = Modifier.height(120.dp)
-                    ) {
-                        items(availableImages.chunked(3)) { rowImages ->
+                    // Usamos Column + Row en lugar de LazyGrid para evitar conflictos de scroll
+                    Column(Modifier.fillMaxWidth()) {
+                        defaultImages.chunked(4).forEach { rowImages ->
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                rowImages.forEach { imageRes ->
+                                rowImages.forEach { imgRes ->
                                     Box(
                                         modifier = Modifier
-                                            .padding(4.dp)
+                                            .size(50.dp)
                                             .border(
-                                                width = 2.dp,
-                                                color = if (selectedImage == imageRes) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.outline,
-                                                shape = MaterialTheme.shapes.small
+                                                width = if (selectedImageRes == imgRes) 2.dp else 0.dp,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                shape = RoundedCornerShape(4.dp)
                                             )
-                                            .clickable { selectedImage = imageRes }
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .clickable { selectedImageRes = imgRes }
                                     ) {
-                                        SafeGameImage(
-                                            imageRes = imageRes,
-                                            title = imageNames[imageRes] ?: "Imagen",
-                                            modifier = Modifier.size(60.dp)
-                                        )
+                                        SafeGameImage(imageRes = imgRes, title = "", modifier = Modifier.fillMaxSize())
                                     }
                                 }
                             }
@@ -506,114 +449,100 @@ fun GameEditDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Campos del formulario
+                // --- CAMPOS DE TEXTO ---
                 OutlinedTextField(
                     value = title,
-                    onValueChange = {
-                        title = it
-                        errorMessage = ""
-                    },
-                    label = { Text("Título del producto") },
+                    onValueChange = { title = it },
+                    label = { Text("Título") },
                     modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessage.isNotEmpty()
+                    singleLine = true
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = genre,
-                    onValueChange = {
-                        genre = it
-                        errorMessage = ""
-                    },
-                    label = { Text("Categoría *") },
+                    onValueChange = { genre = it },
+                    label = { Text("Categoría") },
                     modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessage.isNotEmpty()
+                    singleLine = true
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 OutlinedTextField(
                     value = price,
-                    onValueChange = {
-                        price = it
-                        errorMessage = ""
-                    },
-                    label = { Text("Precio *") },
-                    placeholder = { Text("Ej: \$59.990") },
+                    onValueChange = { price = it },
+                    label = { Text("Precio (Ej: $9.990)") },
                     modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessage.isNotEmpty(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = rating,
-                    onValueChange = {
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,1}$"))) {
-                            rating = it
-                            errorMessage = ""
-                        }
-                    },
-                    label = { Text("Rating (0.0 - 5.0)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessage.isNotEmpty(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = stock,
-                    onValueChange = {
-                        if (it.all { char -> char.isDigit() }) {
-                            stock = it
-                            errorMessage = ""
-                        }
-                    },
-                    label = { Text("Stock *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = errorMessage.isNotEmpty(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Fila optimizada para Rating y Stock
+                Row(Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = rating,
+                        onValueChange = { rating = it },
+                        label = { Text("Rating (0-5)") },
+                        modifier = Modifier.weight(1f).padding(end = 4.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = stock,
+                        onValueChange = { stock = it },
+                        label = { Text("Stock") },
+                        modifier = Modifier.weight(1f).padding(start = 4.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                }
+
+                // Espacio extra al final para asegurar visibilidad
+                Spacer(modifier = Modifier.height(16.dp))
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     val stockInt = stock.toIntOrNull()
+                    val ratingFloat = rating.toFloatOrNull()
+
                     when {
-                        title.isBlank() || genre.isBlank() || price.isBlank() || stock.isBlank() -> {
-                            errorMessage = "Por favor completa todos los campos obligatorios"
-                        }
-                        rating.toFloatOrNull() == null -> {
-                            errorMessage = "El rating debe ser un número válido"
-                        }
-                        rating.toFloat() !in 0.0f..5.0f -> {
-                            errorMessage = "El rating debe estar entre 0.0 y 5.0"
-                        }
-                        !price.startsWith("$") -> {
-                            errorMessage = "El precio debe empezar con $ (Ej: \$59.990)"
-                        }
-                        stockInt == null || stockInt < 0 -> {
-                            errorMessage = "El stock debe ser un número entero válido y no negativo"
-                        }
+                        title.isBlank() || genre.isBlank() || price.isBlank() ->
+                            errorMessage = "Faltan campos obligatorios"
+                        !price.startsWith("$") ->
+                            errorMessage = "El precio debe iniciar con $"
+                        ratingFloat == null || ratingFloat !in 0f..5f ->
+                            errorMessage = "Rating inválido (0.0 - 5.0)"
+                        stockInt == null || stockInt < 0 ->
+                            errorMessage = "Stock inválido"
                         else -> {
-                            val newGame = Product(
+                            // Crear el objeto producto actualizado
+                            val updatedGame = Product(
                                 id = game?.id ?: 0,
                                 title = title.trim(),
                                 genre = genre.trim(),
                                 price = price.trim(),
-                                rating = rating.toFloat(),
-                                imageRes = selectedImage,
-                                stock = stockInt
+                                rating = ratingFloat,
+                                imageRes = selectedImageRes,
+                                stock = stockInt,
+                                // Nota: Si usaras URI real en base de datos, deberías guardarlo aquí como string
+                                // description = selectedImageUri?.toString() ?: ""
                             )
-                            onSave(newGame)
+                            onSave(updatedGame)
                         }
                     }
-                },
-                enabled = title.isNotBlank() && genre.isNotBlank() && price.isNotBlank() && stock.isNotBlank()
+                }
             ) {
-                Text(if (game == null) "Agregar" else "Guardar Cambios")
+                Text(if (game == null) "Crear" else "Guardar")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
     )
 }
